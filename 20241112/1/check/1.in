@@ -1,0 +1,2 @@
+print("First:", * DivStr() // 100500)
+print("Second:", * DivStr() % 100500)
