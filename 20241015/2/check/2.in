@@ -1,0 +1,5 @@
+:numbers x ','.join(map(str,range(x)))
+numbers 2
+numbers 3
+numbers 4
+quit "{}:{}"
