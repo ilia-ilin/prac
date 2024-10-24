@@ -7,4 +7,7 @@ def _fib():
         a, b = b, a + b
 
 def fib(m, n):
-    yield islice(_fib(), m, m + n)
+    yield from islice(_fib(), m, m + n)
+
+import sys
+exec(sys.stdin.read())

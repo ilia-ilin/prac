@@ -1,0 +1,3 @@
+from itertools import product, starmap
+n = int(input()) - 5
+print(*sorted([(fst + "TOR" + mid + "TOR" + lst) for i in range(n) for j in range(n - i) for fst in filter(lambda x: "TOR" not in x, starmap(lambda *x: "".join(x), product("TOR", repeat=i))) for mid in filter(lambda x: "TOR" not in x, starmap(lambda *x: "".join(x), product("TOR", repeat=j))) for lst in filter(lambda x: "TOR" not in x, starmap(lambda *x: "".join(x), product("TOR", repeat=n - i - j - 1)))]), sep = ", ")

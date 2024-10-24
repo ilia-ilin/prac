@@ -1,5 +1,8 @@
 from itertools import islice, count
 def slide(seq, n):
-    for i in count():
-        print(slc := islice(seq, i, i + n))
-        yield from slc
+    for i in range(len(seq)):
+        yield from islice(seq, i, i + n)
+
+
+import sys
+exec(sys.stdin.read())
