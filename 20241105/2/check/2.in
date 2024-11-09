@@ -1,0 +1,11 @@
+r = Triangle((2, 5), (6, 11), (10, 2))
+s = Triangle((6, 11), (10, 2), (2, 5))
+z = Triangle((0, 0), (0, 0), (0, 0))
+
+print(*(f"{n}({bool(x)}):{round(abs(x), 3)}" for n, x in zip("rsz", (r, s, z))))
+
+print(f"{r < s=}, {s < r=}, {z < r=}, {r < z=}")
+
+print(f"{r in s=}, {s in r=}, {z in r=}, {r in z=}")
+
+print(f"{r & s=}, {s & r=}, {z & s=}, {s & z=}")

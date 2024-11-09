@@ -1,0 +1,4 @@
+r(True):30.0 s(True):30.0 z(False):0
+r < s=False, s < r=False, z < r=True, r < z=False
+r in s=True, s in r=True, z in r=True, r in z=True
+r & s=True, s & r=True, z & s=False, s & z=False

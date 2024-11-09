@@ -1,0 +1,8 @@
+a, b, c = Omnibus(), Omnibus(), Omnibus()
+a.o = (Omnibus().ooo - Omnibus().uou) * 234
+b.ooo = 100500
+Omnibus().ooo = None
+print(a.o, b.ooo)
+c.ooo = b.ooo
+del b.ooo
+print(c.ooo)

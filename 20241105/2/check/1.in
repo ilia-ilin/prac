@@ -1,0 +1,13 @@
+r = Triangle((2, 5), (6, 11), (10, 2))
+s = Triangle((6, 11), (10, 2), (2, 5))
+t = Triangle((6, 11), (4, 8), (10, 2))
+o = Triangle((6, 6), (8, 9), (10, 6))
+z = Triangle((0, 0), (0, 0), (0, 0))
+
+print(*(f"{n}({bool(x)}):{round(abs(x), 3)}" for n, x in zip("rstoz", (r, s, t, o, z))))
+
+print(f"{s < t=}, {o < t=}, {r < t=}, {r < s=}, {o < z=}")
+
+print(f"{s in t=}, {o in t=}, {r in t=}, {z in t=}")
+
+print(f"{r & t=}, {t & r=}, {s & r=}, {o & t=}, {z & t=}")
