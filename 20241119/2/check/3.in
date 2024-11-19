@@ -1,0 +1,21 @@
+class C:
+	num = Num()
+class D:
+	num = Num()
+class E:
+	real = 10
+	def __len__(self):
+		return 13
+	def __add__(self, other):
+		return self.real + other
+	def __str__(self):
+		return str(self.real)
+
+d = D()
+print(d.num)
+d.num = E()
+print(d.num)
+e = E()
+del E.real
+d.num = e
+print(d.num)

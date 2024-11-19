@@ -1,0 +1,20 @@
+class C:
+	num = Num()
+class D:
+	num = Num()
+class E:
+	real = 10
+	def __len__(self):
+		return 13
+	def __add__(self, other):
+		return self.real + other
+
+print(C().num)
+print(D().num)
+c, d = C(), D()
+c.num = d.num = (1, 4)
+print(c.num+d.num)
+c.num = E()
+print(c.num+d.num)
+d.num = range(10, 1000, 7)
+print(c.num+d.num)
