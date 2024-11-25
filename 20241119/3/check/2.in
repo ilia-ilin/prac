@@ -1,0 +1,29 @@
+wo = Vowel(y=56, a="both", i=int)
+print(wo, wo.full)
+
+try:
+	print(wo.e)
+except:
+	print("catched!")
+
+wo.e = wo.o = wo.u = 100500
+print(wo, wo.full)
+
+try:
+	wo.answer = int
+except:
+	print("catched!")
+	
+	
+try:
+	wo.tmp = 100500
+except:
+	print("catched!")
+	
+try:
+	print(wo.tmp)
+except:
+	print("catched!")
+	
+wo.full = 100500
+print(wo.full)

@@ -1,0 +1,7 @@
+a: both, i: <class 'int'>, y: 56 False
+catched!
+a: both, e: 100500, i: <class 'int'>, o: 100500, u: 100500, y: 56 True
+catched!
+catched!
+catched!
+True
