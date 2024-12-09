@@ -1,0 +1,8 @@
+class C(str, metaclass=dump):
+    def add(self, other, another=1):
+        return (self + str(other)) * another
+
+c = C("pep")
+print(c.add(8))
+print(c.add(8, another=10))
+print(c + "8")

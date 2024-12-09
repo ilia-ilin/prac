@@ -1,0 +1,8 @@
+class C(int, metaclass=dump):
+    def add(self, other, another=None):
+        return self + other + (another or self)
+
+c = C(10)
+print(c.add(9))
+print(c.add(9, another=10))
+print(c + 100)

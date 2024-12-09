@@ -1,0 +1,12 @@
+  Эта программа вычисляет число 2
+		store 1 k
+		store 200 n
+		store 1 1
+		store 2 2
+
+loop:	add sum k sum
+		div k 2 k
+		sub n 1 n
+		ifgt n 0 loop
+		
+		out sum

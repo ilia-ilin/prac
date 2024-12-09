@@ -1,0 +1,21 @@
+  Эта программа вычисляет n чисел Фиббоначи
+        store 1 fib1
+        store 1 fib2
+        store 20 n
+		store 1 1
+		store 2 2
+		
+		out fib1
+		out fib2
+		
+		sub n 2 n
+		ifle n 0 end
+loop:   add fib1 fib2 fib_sum
+		add fib2 0 fib1
+		add fib_sum 0 fib2
+		
+		out fib2
+		
+		sub n 1 n
+		ifgt n 0 loop
+end:
