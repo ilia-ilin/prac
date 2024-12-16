@@ -1,0 +1,17 @@
+import asyncio
+import math
+
+async def main(A):
+    tasks, B = await mtasks(A)
+    print("len is normal:\t", len(A) - 1 <= len(tasks) <= len(A) + math.log2(len(A)))
+    random.shuffle(tasks)
+    await asyncio.gather(*tasks)
+    return B
+
+
+random.seed(1337)
+A = random.choices(range(10), k=33)
+B = asyncio.run(main(A))
+print("unsorted:\t\t", *A)
+print("sorted:\t\t\t", *B)
+print("is sorted:\t\t", B == sorted(A))
