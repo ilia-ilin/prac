@@ -13,18 +13,5 @@ def objcount(cls):
     cls.__del__ = __del__
     return cls
 
-@objcount
-class C:
-    def __init__(self):
-        self.bbb = 1
-    def __del__(self):
-        pass
-
-c, d, e = C(), C(), C()
-print(C.counter)
-c = 100500
-print(C.counter)
-print(d.bbb)
-
 import sys
 exec(sys.stdin.read())
