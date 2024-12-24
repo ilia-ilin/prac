@@ -7,6 +7,6 @@ for path in filter(lambda x: '2024' in x, os.listdir()):
         sz = len(list(filter(lambda x: '.in' in x, os.listdir(path + '/' + ex + '/check'))))
         for i in range(1, sz + 1):
             file_lines.append(f'"Утешева Екатерина:{path}/{ex}/{i}" = []'.encode())
-        f = open(path + '/' + ex + '/remote', 'wb')
+        f = open(path + '/' + ex + '/check/remote', 'wb')
         f.write(b'\n'.join(file_lines))
         f.close()
