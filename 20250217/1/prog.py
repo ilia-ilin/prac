@@ -42,12 +42,31 @@ def get_tree(repo_path, commit_sha):
         tree_entries.append(f"{mode.decode()} {sha}    {name.decode()}")
     return "\n".join(tree_entries)
 
-def show_commit(repo_path, branch):
+def show_tree(repo_path, branch):
     commit_body = get_commit(repo_path, branch)
-    print(commit_body)
     tree_line = next(line for line in commit_body.split('\n') if line.startswith('tree'))
     tree_sha = tree_line.split()[1]
     print(get_tree(repo_path, tree_sha))
+
+def walk_history(repo_path, branch):
+    ref_path = Path(repo_path) / ".git/refs/heads" / branch
+    current_sha = ref_path.read_text().strip()
+    
+    while current_sha:
+        commit_body = get_commit(repo_path, current_sha)
+        tree_line = next(line for line in commit_body.split('\n') if line.startswith('tree'))
+        tree_sha = tree_line.split()[1]
+        print(f"TREE for commit {current_sha}")
+        tree_content = get_tree(repo_path, tree_sha)
+        print(tree_content)
+        parents = [line.split()[1] for line in commit_body.split('\n') if line.startswith('parent')]
+        current_sha = parents[0] if parents else None
+
+def show_commit(repo_path, branch):
+    commit_body = get_commit(repo_path, branch)
+    print(commit_body)
+    show_tree(repo_path, branch)
+    walk_history(repo_path, branch)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
