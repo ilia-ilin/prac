@@ -11,7 +11,7 @@ def list_branches(repo_path):
     for branch in heads_dir.glob("*"):
         print(branch.name)
 
-def show_commit(repo_path, branch):
+def get_commit(repo_path, branch):
     git_dir = Path(repo_path) / ".git"
     ref_path = git_dir / "refs/heads" / branch
     if not ref_path.exists():
@@ -25,7 +25,29 @@ def show_commit(repo_path, branch):
         raw = zlib.decompress(f.read())
     
     header, _, body = raw.partition(b'\x00')
-    print(body.decode())
+    return body.decode()
+    
+def get_tree(repo_path, commit_sha):
+    obj_path = Path(repo_path) / ".git/objects" / commit_sha[:2] / commit_sha[2:]
+    with open(obj_path, "rb") as f:
+        raw = zlib.decompress(f.read())
+    
+    _, _, body = raw.partition(b'\x00')
+    tree_entries = []
+    while body:
+        mode_name, _, rest = body.partition(b'\x00')
+        sha = rest[:20].hex()
+        body = rest[20:]
+        mode, name = mode_name.split(b' ', 1)
+        tree_entries.append(f"{mode.decode()} {sha}    {name.decode()}")
+    return "\n".join(tree_entries)
+
+def show_commit(repo_path, branch):
+    commit_body = get_commit(repo_path, branch)
+    print(commit_body)
+    tree_line = next(line for line in commit_body.split('\n') if line.startswith('tree'))
+    tree_sha = tree_line.split()[1]
+    print(get_tree(repo_path, tree_sha))
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
