@@ -43,8 +43,7 @@ def add_monster(name, pos, msg):
     mesh[pos.y][pos.x] = entity(name, msg)
 
 def encounter(pos):
-    print("Enc")
-    print(cowsay.cowsay(mesh[pos.y][pos.x].msg))
+    print(cowsay.cowsay(mesh[pos.y][pos.x].msg, cow=mesh[pos.y][pos.x].name))
 
 def main():
     playerPos = point(0, 0)
