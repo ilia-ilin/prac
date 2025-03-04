@@ -8,8 +8,9 @@ class point:
         self.y = y
 
 class entity:
-    def __init__(self, name, msg):
+    def __init__(self, name: str, hp: int, msg: str) -> None:
         self.name = name
+        self.hp = hp
         self.msg = msg
 
 #mesh[y][x]
@@ -33,14 +34,14 @@ def move_player(pos, vec):
     
     return newpos
 
-def add_monster(name, pos, msg):
+def add_monster(name, pos, hp, msg):
     if name not in cowsay.list_cows():
         print('Cannot add unknown monster')
         return
     print(f'Added monster {name} to ({pos.x}, {pos.y}) saying {msg}')
     if mesh[pos.y][pos.x]:
         print('Replaced the old monster')
-    mesh[pos.y][pos.x] = entity(name, msg)
+    mesh[pos.y][pos.x] = entity(name, hp, msg)
 
 def encounter(pos):
     print(cowsay.cowsay(mesh[pos.y][pos.x].msg, cow=mesh[pos.y][pos.x].name))
@@ -63,7 +64,7 @@ def shlex(line):
             playerPos = move_player(playerPos, point(1, 0))
         elif cmd == "addmon":
             name, params = params.split(' ', 1)
-            for _ in range(2):
+            for _ in range(3):
                 param, params = params.split(' ', 1)
                 if param == "hello":
                     if ' ' in params:
@@ -82,14 +83,18 @@ def shlex(line):
                                 raise ValueError
                         paramval = paramval[1:-1]
                     hello = paramval
-                # elif param == "hp":
-                #     hp, params = params.split(' ', 1)
-                #     hp = int(hp)
+                elif param == "hp":
+                    if ' ' in params:
+                        hp, params = params.split(' ', 1)
+                    else:
+                        hp = params
+                        params = ''
+                    hp = int(hp)
                 elif param == "coords":
                     x, y, params = params.split(' ', 2)
                     pos = point(int(x), int(y))
 
-            add_monster(name, pos, hello)
+            add_monster(name, pos, hp, hello)
         else:
             print('Invalid command')
     except:
