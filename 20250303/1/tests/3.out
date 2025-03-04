@@ -1,0 +1,77 @@
+<<< Welcome to Python-MUD 0.1 >>>
+Moved to (0, 9)
+Moved to (0, 0)
+Moved to (9, 0)
+Moved to (0, 0)
+Added monster bunny to (1, 0) saying hello, world!
+Added monster cheese to (1, 0) saying Cheeeese!
+Replaced the old monster
+Invalid arguments
+Invalid arguments
+Invalid arguments
+Invalid arguments
+Invalid arguments
+Invalid arguments
+Invalid arguments
+Invalid arguments
+Cannot add unknown monster
+Added monster jgsbat to (1, 1) saying Ololololo
+Moved to (1, 0)
+ ___________ 
+< Cheeeese! >
+ ----------- 
+   \
+    \
+      _____   _________
+     /     \_/         |
+    |                 ||
+    |                 ||
+   |    ###\  /###   | |
+   |     0  \/  0    | |
+  /|                 | |
+ / |        <        |\ \
+| /|                 | | |
+| |     \_______/   |  | |
+| |                 | / /
+/||                 /|||
+   ----------------|
+        | |    | |
+        ***    ***
+       /___\  /___\
+Moved to (1, 1)
+ ___________ 
+< Ololololo >
+ ----------- 
+         \
+          \
+    ,_                    _,
+    ) '-._  ,_    _,  _.-' (
+    )  _.-'.|\\--//|.'-._  (
+     )'   .'\/o\/o\/'.   `(
+      ) .' . \====/ . '. (
+       )  / <<    >> \  (
+        '-._/``  ``\_.-'
+  jgs     __\\'--'//__
+         (((""`  `"")))
+Moved to (1, 0)
+ ___________ 
+< Cheeeese! >
+ ----------- 
+   \
+    \
+      _____   _________
+     /     \_/         |
+    |                 ||
+    |                 ||
+   |    ###\  /###   | |
+   |     0  \/  0    | |
+  /|                 | |
+ / |        <        |\ \
+| /|                 | | |
+| |     \_______/   |  | |
+| |                 | / /
+/||                 /|||
+   ----------------|
+        | |    | |
+        ***    ***
+       /___\  /___\

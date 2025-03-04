@@ -1,3 +1,4 @@
+<<< Welcome to Python-MUD 0.1 >>>
 Moved to (0, 9)
 Moved to (0, 8)
 Moved to (0, 9)
@@ -6,13 +7,13 @@ Moved to (9, 0)
 Moved to (8, 0)
 Moved to (9, 0)
 Moved to (0, 0)
-Added monster bunny to (1, 0) saying hello
-Added monster cheese to (1, 0) saying hello
+Added monster bunny to (1, 0) saying hello, world!
+Added monster cheese to (1, 0) saying cheese
 Replaced the old monster
 Moved to (1, 0)
- _______ 
-< hello >
- ------- 
+ ________ 
+< cheese >
+ -------- 
    \
     \
       _____   _________

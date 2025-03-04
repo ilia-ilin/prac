@@ -1,0 +1,12 @@
+up
+up
+down
+down
+left
+left
+right
+right
+addmon bunny coords 1 0 hp 100 hello "hello, world!"
+addmon cheese coords 1 0 hello cheese hp 100
+right
+right

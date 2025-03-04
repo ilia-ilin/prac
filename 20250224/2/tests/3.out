@@ -2,23 +2,46 @@ Moved to (0, 9)
 Moved to (0, 0)
 Moved to (9, 0)
 Moved to (0, 0)
-Added monster to (1, 0) saying hello
+Added monster bunny to (1, 0) saying hello
+Added monster cheese to (1, 9) saying Cheeeese!
+Cannot add unknown monster
 Moved to (1, 0)
  _______ 
 < hello >
  ------- 
-        \   ^__^
-         \  (oo)\_______
-            (__)\       )\/\
-                ||----w |
-                ||     ||
+  \
+   \   \
+        \ /\
+        ( )
+      .( o ).
 Moved to (1, 9)
+ ___________ 
+< Cheeeese! >
+ ----------- 
+   \
+    \
+      _____   _________
+     /     \_/         |
+    |                 ||
+    |                 ||
+   |    ###\  /###   | |
+   |     0  \/  0    | |
+  /|                 | |
+ / |        <        |\ \
+| /|                 | | |
+| |     \_______/   |  | |
+| |                 | / /
+/||                 /|||
+   ----------------|
+        | |    | |
+        ***    ***
+       /___\  /___\
 Moved to (1, 0)
  _______ 
 < hello >
  ------- 
-        \   ^__^
-         \  (oo)\_______
-            (__)\       )\/\
-                ||----w |
-                ||     ||
+  \
+   \   \
+        \ /\
+        ( )
+      .( o ).

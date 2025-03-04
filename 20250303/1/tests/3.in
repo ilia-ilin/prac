@@ -1,0 +1,19 @@
+up
+down
+left
+right
+addmon bunny coords 1 0 hello "hello, world!" hp 100
+addmon cheese coords 1 0 hello Cheeeese! hp 100
+addmon Cowowo 1 9 :(
+addmon Cowowo
+addmon Cowowo coords a 1
+addmon Cowowo coords 1 1
+addmon Cowowo coords 1 1 hello
+addmon Cowowo coords 1 1 hello "Ololololo
+addmon Cowowo coords 1 1 hello "Ololololo"
+addmon Cowowo coords 1 1 hello "Ololololo" hp
+addmon Cowowo coords 1 1 hello "Ololololo" hp 100
+addmon jgsbat coords 1 1 hello "Ololololo" hp 100
+right
+down
+up
