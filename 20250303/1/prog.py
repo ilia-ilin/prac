@@ -1,6 +1,7 @@
 #MUD
 import sys
 import cowsay
+from io import StringIO
 
 class point:
     def __init__(self, x, y):
@@ -17,6 +18,7 @@ class entity:
 #point(x, y)
 mesh = [(10 * [None]) for _ in range(10)]
 playerPos = point(0, 0)
+customMonsters = dict()
 
 def debug_print():
     for line in mesh:
@@ -35,7 +37,7 @@ def move_player(pos, vec):
     return newpos
 
 def add_monster(name, pos, hp, msg):
-    if name not in cowsay.list_cows():
+    if name not in cowsay.list_cows() and name not in customMonsters:
         print('Cannot add unknown monster')
         return
     print(f'Added monster {name} to ({pos.x}, {pos.y}) saying {msg}')
@@ -44,7 +46,10 @@ def add_monster(name, pos, hp, msg):
     mesh[pos.y][pos.x] = entity(name, hp, msg)
 
 def encounter(pos):
-    print(cowsay.cowsay(mesh[pos.y][pos.x].msg, cow=mesh[pos.y][pos.x].name))
+    if mesh[pos.y][pos.x].name in cowsay.list_cows():
+        print(cowsay.cowsay(mesh[pos.y][pos.x].msg, cow=mesh[pos.y][pos.x].name))
+    else:
+        print(cowsay.cowsay(mesh[pos.y][pos.x].msg, cowfile=customMonsters[mesh[pos.y][pos.x].name]))
 
 def shlex(line):
     if ' ' in line:
@@ -100,7 +105,25 @@ def shlex(line):
     except:
         print('Invalid arguments')
 
+def add_custom():
+    customMonsters["jgsbat"] = cowsay.read_dot_cow(StringIO(r"""
+$the_cow = <<EOC;
+         $thoughts
+          $thoughts
+    ,_                    _,
+    ) '-._  ,_    _,  _.-' (
+    )  _.-'.|\\\\--//|.'-._  (
+     )'   .'\\/o\\/o\\/'.   `(
+      ) .' . \\====/ . '. (
+       )  / <<    >> \\  (
+        '-._/``  ``\\_.-'
+  jgs     __\\\\'--'//__
+         (((""`  `"")))
+EOC
+"""))
+
 def main():
+    add_custom()
     print('<<< Welcome to Python-MUD 0.1 >>>')
     
     for line in sys.stdin:
