@@ -2,11 +2,6 @@
 import sys
 import cowsay
 
-
-#mesh[y][x]
-#point(x, y)
-mesh = [(10 * [None]) for _ in range(10)]
-
 class point:
     def __init__(self, x, y):
         self.x = x
@@ -16,6 +11,11 @@ class entity:
     def __init__(self, name, msg):
         self.name = name
         self.msg = msg
+
+#mesh[y][x]
+#point(x, y)
+mesh = [(10 * [None]) for _ in range(10)]
+playerPos = point(0, 0)
 
 def debug_print():
     for line in mesh:
@@ -45,40 +45,65 @@ def add_monster(name, pos, msg):
 def encounter(pos):
     print(cowsay.cowsay(mesh[pos.y][pos.x].msg, cow=mesh[pos.y][pos.x].name))
 
+def shlex(line):
+    if ' ' in line:
+        cmd, params = line.split(' ', 1)
+    else:
+        cmd = line
+    global playerPos
+    
+    try:
+        if cmd == "up":
+            playerPos = move_player(playerPos, point(0, -1))
+        elif cmd == "down":
+            playerPos = move_player(playerPos, point(0, 1))
+        elif cmd == "left":
+            playerPos = move_player(playerPos, point(-1, 0))
+        elif cmd == "right":
+            playerPos = move_player(playerPos, point(1, 0))
+        elif cmd == "addmon":
+            name, params = params.split(' ', 1)
+            for _ in range(2):
+                param, params = params.split(' ', 1)
+                if param == "hello":
+                    if ' ' in params:
+                        paramval, params = params.split(' ', 1)
+                    else:
+                        paramval = params
+                        params = ''
+                    if paramval[0] == '"':
+                        while paramval[-1] != '"':
+                            if ' ' in params:
+                                tmpval, params = params.split(' ', 1)
+                                paramval += ' ' + tmpval
+                            elif params[-1] == '"':
+                                paramval += ' ' + params
+                            else:
+                                raise ValueError
+                        paramval = paramval[1:-1]
+                    hello = paramval
+                # elif param == "hp":
+                #     hp, params = params.split(' ', 1)
+                #     hp = int(hp)
+                elif param == "coords":
+                    x, y, params = params.split(' ', 2)
+                    pos = point(int(x), int(y))
+
+            add_monster(name, pos, hello)
+        else:
+            print('Invalid command')
+    except:
+        print('Invalid arguments')
+
 def main():
     print('<<< Welcome to Python-MUD 0.1 >>>')
-    
-    playerPos = point(0, 0)
     
     for line in sys.stdin:
         line = line.strip()
         if not line:
             continue
         
-        parts = line.split()
-        cmd = parts[0]
-        
-        try:
-            if cmd == "up":
-                playerPos = move_player(playerPos, point(0, -1))
-            elif cmd == "down":
-                playerPos = move_player(playerPos, point(0, 1))
-            elif cmd == "left":
-                playerPos = move_player(playerPos, point(-1, 0))
-            elif cmd == "right":
-                playerPos = move_player(playerPos, point(1, 0))
-            elif cmd == "addmon":
-                if len(parts) != 5:
-                    raise ValueError
-                name = parts[1]
-                x = int(parts[2])
-                y = int(parts[3])
-                hello = parts[4]
-                add_monster(name, point(x, y), hello)
-            else:
-                print('Invalid command')
-        except:
-            print('Invalid arguments')
+        shlex(line)
 
 if __name__ == "__main__":
     main()
