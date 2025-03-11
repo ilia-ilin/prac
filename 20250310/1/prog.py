@@ -131,32 +131,45 @@ class MUD(cmd.Cmd):
         global playerPos
         monster = mesh[playerPos.y][playerPos.x]
         
-        if not monster:
-            print('No monster here')
-            return
-        
-        tokens = arg.split(' ')
-        if tokens[0] == 'with':
-            if tokens[1] not in weaponsDmg:
-                print('Unknown weapon')
-                return
-            damage = min(weaponsDmg[tokens[1]], monster.hp)
-        else:
-            damage = min(weaponsDmg['sword'], monster.hp)
+        try:
+            tokens = arg.split(' ')
+            name = tokens[0]
 
-        monster.hp -= damage
-        print(f'Attacked {monster.name},  damage {damage} hp')
-        if monster.hp == 0:
-            print(f'{monster.name} died')
-            mesh[playerPos.y][playerPos.x] = None
-        else:
-            print(f'{monster.name} now has {monster.hp}')
+            if not name:
+                print("Invalid arguments")
+                return
+            if not monster or monster.name != name:
+                print(f'No {name} here')
+                return
+            
+            
+            if tokens[1] == 'with':
+                if tokens[2] not in weaponsDmg:
+                    print('Unknown weapon')
+                    return
+                damage = min(weaponsDmg[tokens[2]], monster.hp)
+            else:
+                damage = min(weaponsDmg['sword'], monster.hp)
+
+            monster.hp -= damage
+            print(f'Attacked {monster.name},  damage {damage} hp')
+            if monster.hp == 0:
+                print(f'{monster.name} died')
+                mesh[playerPos.y][playerPos.x] = None
+            else:
+                print(f'{monster.name} now has {monster.hp}')
+        except Exception as e:
+            print("Invalid arguments")
 
     def complete_attack(self, text, line, begidx, endidx):
-        if len(line.split(' ')) < 3:
+        all_monsters = cowsay.list_cows() + list(customMonsters.keys())
+        if len(line.split(' ')) == 2:
+            return [name for name in all_monsters if name.startswith(text)]
+        elif len(line.split(' ')) == 3:
             return ['with']
         else:
             return [name for name in list(weaponsDmg.keys()) if name.startswith(text)]
+        
 
 def main():
     add_custom()
