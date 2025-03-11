@@ -128,9 +128,13 @@ class MUD(cmd.Cmd):
     def do_attack(self, arg):
         global playerPos
         monster = mesh[playerPos.y][playerPos.x]
-        
-        if not monster:
-            print('No monster here')
+        name = arg
+
+        if not name:
+            print("Invalid arguments")
+            return
+        if not monster or monster.name != name:
+            print(f'No {name} here')
             return
         damage = min(10, monster.hp)
         monster.hp -= damage
@@ -140,6 +144,11 @@ class MUD(cmd.Cmd):
             mesh[playerPos.y][playerPos.x] = None
         else:
             print(f'{monster.name} now has {monster.hp}')
+
+    def complete_attack(self, text, line, begidx, endidx):
+        all_monsters = cowsay.list_cows() + list(customMonsters.keys())
+        #if len(line.split(' ')) == 2:
+        return [name for name in all_monsters if name.startswith(text)]
 
 def main():
     add_custom()
