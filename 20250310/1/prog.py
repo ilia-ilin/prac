@@ -20,6 +20,7 @@ class entity:
 mesh = [(10 * [None]) for _ in range(10)]
 playerPos = point(0, 0)
 customMonsters = dict()
+weaponsDmg = { 'sword': 10, 'spear': 15, 'axe': 20 }
 
 def debug_print():
     for line in mesh:
@@ -96,7 +97,7 @@ class MUD(cmd.Cmd):
 
     def do_addmon(self, arg):
         """
-        Add a monster.
+        Add a monster
         Syntax: addmon name hp <number> coords <x> <y> hello "Message"
         """
         try:
@@ -126,13 +127,23 @@ class MUD(cmd.Cmd):
             return [name for name in ['coords', 'hello', 'hp'] if name.startswith(text)]
     
     def do_attack(self, arg):
+        "Attack a monster"
         global playerPos
         monster = mesh[playerPos.y][playerPos.x]
         
         if not monster:
             print('No monster here')
             return
-        damage = min(10, monster.hp)
+        
+        tokens = arg.split(' ')
+        if tokens[0] == 'with':
+            if tokens[1] not in weaponsDmg:
+                print('Unknown weapon')
+                return
+            damage = min(weaponsDmg[tokens[1]], monster.hp)
+        else:
+            damage = min(weaponsDmg['sword'], monster.hp)
+
         monster.hp -= damage
         print(f'Attacked {monster.name},  damage {damage} hp')
         if monster.hp == 0:
@@ -140,6 +151,12 @@ class MUD(cmd.Cmd):
             mesh[playerPos.y][playerPos.x] = None
         else:
             print(f'{monster.name} now has {monster.hp}')
+
+    def complete_attack(self, text, line, begidx, endidx):
+        if len(line.split(' ')) < 3:
+            return ['with']
+        else:
+            return [name for name in list(weaponsDmg.keys()) if name.startswith(text)]
 
 def main():
     add_custom()
