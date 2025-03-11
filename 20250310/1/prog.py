@@ -1,4 +1,5 @@
 #MUD
+import cmd
 import sys
 import cowsay
 from io import StringIO
@@ -51,59 +52,6 @@ def encounter(pos):
     else:
         print(cowsay.cowsay(mesh[pos.y][pos.x].msg, cowfile=customMonsters[mesh[pos.y][pos.x].name]))
 
-def shlex(line):
-    if ' ' in line:
-        cmd, params = line.split(' ', 1)
-    else:
-        cmd = line
-    global playerPos
-    
-    try:
-        if cmd == "up":
-            playerPos = move_player(playerPos, point(0, -1))
-        elif cmd == "down":
-            playerPos = move_player(playerPos, point(0, 1))
-        elif cmd == "left":
-            playerPos = move_player(playerPos, point(-1, 0))
-        elif cmd == "right":
-            playerPos = move_player(playerPos, point(1, 0))
-        elif cmd == "addmon":
-            name, params = params.split(' ', 1)
-            for _ in range(3):
-                param, params = params.split(' ', 1)
-                if param == "hello":
-                    if ' ' in params:
-                        paramval, params = params.split(' ', 1)
-                    else:
-                        paramval = params
-                        params = ''
-                    if paramval[0] == '"':
-                        while paramval[-1] != '"':
-                            if ' ' in params:
-                                tmpval, params = params.split(' ', 1)
-                                paramval += ' ' + tmpval
-                            elif params[-1] == '"':
-                                paramval += ' ' + params
-                            else:
-                                raise ValueError
-                        paramval = paramval[1:-1]
-                    hello = paramval
-                elif param == "hp":
-                    if ' ' in params:
-                        hp, params = params.split(' ', 1)
-                    else:
-                        hp = params
-                        params = ''
-                    hp = int(hp)
-                elif param == "coords":
-                    x, y, params = params.split(' ', 2)
-                    pos = point(int(x), int(y))
-
-            add_monster(name, pos, hp, hello)
-        else:
-            print('Invalid command')
-    except:
-        print('Invalid arguments')
 
 def add_custom():
     customMonsters["jgsbat"] = cowsay.read_dot_cow(StringIO(r"""
@@ -122,16 +70,65 @@ $the_cow = <<EOC;
 EOC
 """))
 
+class MUD(cmd.Cmd):
+    intro = '<<< Welcome to Python-MUD 0.1 >>>'
+    prompt = 'MUD>> '
+
+    def do_up(self, arg):
+        "Move up"
+        global playerPos
+        playerPos = move_player(playerPos, point(0, -1))
+
+    def do_down(self, arg):
+        "Move down"
+        global playerPos
+        playerPos = move_player(playerPos, point(0, 1))
+
+    def do_left(self, arg):
+        "Move left"
+        global playerPos
+        playerPos = move_player(playerPos, point(-1, 0))
+
+    def do_right(self, arg):
+        "Move right"
+        global playerPos
+        playerPos = move_player(playerPos, point(1, 0))
+
+    def do_addmon(self, arg):
+        """
+        Add a monster.
+        Syntax: addmon name hp <number> coords <x> <y> hello "Message"
+        """
+        try:
+            tokens = arg.split()
+            name = tokens[0]
+            hp_idx = tokens.index("hp")
+            coords_idx = tokens.index("coords")
+            hello_idx = tokens.index("hello")
+            hp = int(tokens[hp_idx + 1])
+            x = int(tokens[coords_idx + 1])
+            y = int(tokens[coords_idx + 2])
+            
+            idxs = sorted([hp_idx, coords_idx, hello_idx])
+            idxs.append(None)
+            lastidx = idxs[idxs.index(hello_idx) + 1]
+
+            msg = ' '.join(tokens[hello_idx + 1:lastidx]).strip('"')
+            add_monster(name, point(x, y), hp, msg)
+        except Exception as e:
+            print("Invalid arguments")
+
 def main():
     add_custom()
-    print('<<< Welcome to Python-MUD 0.1 >>>')
     
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
+    MUD().cmdloop()
+
+    # for line in sys.stdin:
+    #     line = line.strip()
+    #     if not line:
+    #         continue
         
-        shlex(line)
+    #     shlex(line)
 
 if __name__ == "__main__":
     main()
