@@ -100,7 +100,7 @@ class MUD(cmd.Cmd):
         Syntax: addmon name hp <number> coords <x> <y> hello "Message"
         """
         try:
-            tokens = arg.split()
+            tokens = arg.split(' ')
             name = tokens[0]
             hp_idx = tokens.index("hp")
             coords_idx = tokens.index("coords")
@@ -117,6 +117,13 @@ class MUD(cmd.Cmd):
             add_monster(name, point(x, y), hp, msg)
         except Exception as e:
             print("Invalid arguments")
+    
+    def complete_addmon(self, text, line, begidx, endidx):
+        all_monsters = cowsay.list_cows() + list(customMonsters.keys())
+        if len(line.split(' ')) < 3:
+            return [name for name in all_monsters if name.startswith(text)]
+        else:
+            return [name for name in ['coords', 'hello', 'hp'] if name.startswith(text)]
 
 def main():
     add_custom()
