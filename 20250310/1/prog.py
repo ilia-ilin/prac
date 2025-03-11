@@ -124,6 +124,22 @@ class MUD(cmd.Cmd):
             return [name for name in all_monsters if name.startswith(text)]
         else:
             return [name for name in ['coords', 'hello', 'hp'] if name.startswith(text)]
+    
+    def do_attack(self, arg):
+        global playerPos
+        monster = mesh[playerPos.y][playerPos.x]
+        
+        if not monster:
+            print('No monster here')
+            return
+        damage = min(10, monster.hp)
+        monster.hp -= damage
+        print(f'Attacked {monster.name},  damage {damage} hp')
+        if monster.hp == 0:
+            print(f'{monster.name} died')
+            mesh[playerPos.y][playerPos.x] = None
+        else:
+            print(f'{monster.name} now has {monster.hp}')
 
 def main():
     add_custom()
