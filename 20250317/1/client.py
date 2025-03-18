@@ -1,0 +1,170 @@
+#MUD-client
+import asyncio
+import cmd
+import cowsay
+from io import StringIO
+
+
+weaponsDmg = { 'sword': 10, 'spear': 15, 'axe': 20 }
+customMonsters = {
+    "jgsbat" : cowsay.read_dot_cow(StringIO(r"""
+$the_cow = <<EOC;
+         $thoughts
+          $thoughts
+    ,_                    _,
+    ) '-._  ,_    _,  _.-' (
+    )  _.-'.|\\\\--//|.'-._  (
+     )'   .'\\/o\\/o\\/'.   `(
+      ) .' . \\====/ . '. (
+       )  / <<    >> \\  (
+        '-._/``  ``\\_.-'
+  jgs     __\\\\'--'//__
+         (((""`  `"")))
+EOC
+"""))
+}
+
+def encounter(name, msg):
+    if name in cowsay.list_cows():
+        print(cowsay.cowsay(msg, cow=name))
+    else:
+        print(cowsay.cowsay(msg, cowfile=customMonsters[name]))
+
+class MUD(cmd.Cmd):
+    intro = '<<< Welcome to Python-MUD 0.1 >>>'
+    prompt = 'MUD>> '
+
+    def __init__(self):
+        super().__init__()
+        self.loop = asyncio.get_event_loop()
+        self.reader = None
+        self.writer = None
+    
+    def preloop(self):
+       self.loop.run_until_complete(self.init_connection())
+
+    async def init_connection(self):
+        self.reader, self.writer = await asyncio.open_connection('localhost', 1337)
+
+    async def send(self, msg):
+        self.writer.write((msg + '\n').encode())
+        await self.writer.drain()
+        data = await self.reader.readline()
+        return data.decode().strip()
+
+    def do_up(self, arg):
+        "Move up"
+        self.loop.run_until_complete(self._move_player(0, -1))
+
+    def do_down(self, arg):
+        "Move down"
+        self.loop.run_until_complete(self._move_player(0, 1))
+
+    def do_left(self, arg):
+        "Move left"
+        self.loop.run_until_complete(self._move_player(-1, 0))
+
+    def do_right(self, arg):
+        "Move right"
+        self.loop.run_until_complete(self._move_player(1, 0))
+
+    async def _move_player(self, dx, dy):
+        resp = await self.send(f"move {dx} {dy}")
+        x, y, *data = resp.split(' ')
+        print(f'Moved to ({x}, {y})') 
+        if data[0] != 'noencounter':
+            name, *msg = data
+            msg = ' '.join(msg)
+            encounter(name, msg)
+
+
+    def do_addmon(self, arg):
+        """
+        Add a monster
+        Syntax: addmon name hp <number> coords <x> <y> hello "Message"
+        """
+        try:
+            tokens = arg.split(' ')
+            name = tokens[0]
+            hp_idx = tokens.index("hp")
+            coords_idx = tokens.index("coords")
+            hello_idx = tokens.index("hello")
+            hp = int(tokens[hp_idx + 1])
+            x = int(tokens[coords_idx + 1])
+            y = int(tokens[coords_idx + 2])
+            
+            idxs = sorted([hp_idx, coords_idx, hello_idx])
+            idxs.append(None)
+            lastidx = idxs[idxs.index(hello_idx) + 1]
+
+            msg = ' '.join(tokens[hello_idx + 1:lastidx]).strip('"')
+
+            if name not in cowsay.list_cows() and name not in customMonsters:
+                print('Cannot add unknown monster')
+                return
+            
+            self.loop.run_until_complete(self._addmon(name, int(x), int(y), int(hp), msg))
+        except Exception as e:
+            print("Invalid arguments")
+    
+    async def _addmon(self, name, x, y, hp, msg):
+        resp = await self.send(f"addmon {name} {x} {y} {hp} {msg}")
+        print(f'Added monster {name} to ({x}, {y}) saying {msg}')
+        if resp == 'replaced':
+            print('Replaced the old monster')
+
+    def complete_addmon(self, text, line, begidx, endidx):
+        all_monsters = cowsay.list_cows() + list(customMonsters.keys())
+        if len(line.split(' ')) < 3:
+            return [name for name in all_monsters if name.startswith(text)]
+        else:
+            return [name for name in ['coords', 'hello', 'hp'] if name.startswith(text)]
+    
+    def do_attack(self, arg):
+        "Attack a monster"
+        try:
+            tokens = arg.split(' ')
+            name = tokens[0]
+            if not name:
+                print("Invalid arguments")
+                return
+            
+            if len(tokens) == 1:
+                damage = weaponsDmg['sword']
+            elif tokens[1] == 'with':
+                if tokens[2] not in weaponsDmg:
+                    print('Unknown weapon')
+                    return
+                damage = weaponsDmg[tokens[2]]
+                
+            
+            self.loop.run_until_complete(self._attack(name, damage))
+        except Exception as e:
+            print("Invalid arguments")
+    
+    async def _attack(self, name, damage):
+        resp = await self.send(f"attack {name} {damage}")
+        if resp == 'nomonster':
+            print(f'No {name} here')
+        else:
+            damage, hp = resp.split(' ', 1)
+            print(f'Attacked {name},  damage {damage} hp')
+            if hp == '0':
+                print(f'{name} died')
+            else:
+                print(f'{name} now has {hp}')
+
+    def complete_attack(self, text, line, begidx, endidx):
+        all_monsters = cowsay.list_cows() + list(customMonsters.keys())
+        if len(line.split(' ')) == 2:
+            return [name for name in all_monsters if name.startswith(text)]
+        elif len(line.split(' ')) == 3:
+            return ['with']
+        else:
+            return [name for name in list(weaponsDmg.keys()) if name.startswith(text)]
+        
+def main():
+    MUD().cmdloop()
+
+if __name__ == '__main__':
+    main()
