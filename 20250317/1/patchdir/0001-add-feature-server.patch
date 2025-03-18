@@ -1,0 +1,251 @@
+From f68cb2aca75ec049f920cf0db94808400ac6d727 Mon Sep 17 00:00:00 2001
+From: ilia-ilin <ilia.ilin.k@gmail.com>
+Date: Wed, 19 Mar 2025 02:29:01 +0300
+Subject: [PATCH 1/2] add feature server
+
+---
+ 20250317/1/prog.py | 217 +++++++++++----------------------------------
+ 1 file changed, 54 insertions(+), 163 deletions(-)
+
+diff --git a/20250317/1/prog.py b/20250317/1/prog.py
+index 66d2423..660c81f 100644
+--- a/20250317/1/prog.py
++++ b/20250317/1/prog.py
+@@ -1,8 +1,5 @@
+-#MUD
+-import cmd
+-import sys
+-import cowsay
+-from io import StringIO
++#MUD-server
++import asyncio
+ 
+ class point:
+     def __init__(self, x, y):
+@@ -19,169 +16,63 @@ class entity:
+ #point(x, y)
+ mesh = [(10 * [None]) for _ in range(10)]
+ playerPos = point(0, 0)
+-customMonsters = dict()
+-weaponsDmg = { 'sword': 10, 'spear': 15, 'axe': 20 }
+ 
+-def debug_print():
+-    for line in mesh:
+-        for elm in line:
+-            print(elm, end='\t')
+-        print()
+-    print()
++def move_player(dx, dy):
++    global playerPos
++    newpos = point((playerPos.x + dx + 10) % 10, (playerPos.y + dy + 10) % 10)
++    playerPos = newpos
++    response = f'{newpos.x} {newpos.y} '
+ 
+-def move_player(pos, vec):
+-    newpos = point((pos.x + vec.x + 10) % 10, (pos.y + vec.y + 10) % 10)
+-    
+-    print(f'Moved to ({newpos.x}, {newpos.y})') 
+     if mesh[newpos.y][newpos.x]:
+-        encounter(newpos)
+-    
+-    return newpos
+-
+-def add_monster(name, pos, hp, msg):
+-    if name not in cowsay.list_cows() and name not in customMonsters:
+-        print('Cannot add unknown monster')
+-        return
+-    print(f'Added monster {name} to ({pos.x}, {pos.y}) saying {msg}')
+-    if mesh[pos.y][pos.x]:
+-        print('Replaced the old monster')
+-    mesh[pos.y][pos.x] = entity(name, hp, msg)
+-
+-def encounter(pos):
+-    if mesh[pos.y][pos.x].name in cowsay.list_cows():
+-        print(cowsay.cowsay(mesh[pos.y][pos.x].msg, cow=mesh[pos.y][pos.x].name))
++        response += f'{mesh[newpos.y][newpos.x].name} {mesh[newpos.y][newpos.x].msg}'
+     else:
+-        print(cowsay.cowsay(mesh[pos.y][pos.x].msg, cowfile=customMonsters[mesh[pos.y][pos.x].name]))
+-
+-
+-def add_custom():
+-    customMonsters["jgsbat"] = cowsay.read_dot_cow(StringIO(r"""
+-$the_cow = <<EOC;
+-         $thoughts
+-          $thoughts
+-    ,_                    _,
+-    ) '-._  ,_    _,  _.-' (
+-    )  _.-'.|\\\\--//|.'-._  (
+-     )'   .'\\/o\\/o\\/'.   `(
+-      ) .' . \\====/ . '. (
+-       )  / <<    >> \\  (
+-        '-._/``  ``\\_.-'
+-  jgs     __\\\\'--'//__
+-         (((""`  `"")))
+-EOC
+-"""))
+-
+-class MUD(cmd.Cmd):
+-    intro = '<<< Welcome to Python-MUD 0.1 >>>'
+-    prompt = 'MUD>> '
+-
+-    def do_up(self, arg):
+-        "Move up"
+-        global playerPos
+-        playerPos = move_player(playerPos, point(0, -1))
+-
+-    def do_down(self, arg):
+-        "Move down"
+-        global playerPos
+-        playerPos = move_player(playerPos, point(0, 1))
+-
+-    def do_left(self, arg):
+-        "Move left"
+-        global playerPos
+-        playerPos = move_player(playerPos, point(-1, 0))
+-
+-    def do_right(self, arg):
+-        "Move right"
+-        global playerPos
+-        playerPos = move_player(playerPos, point(1, 0))
+-
+-    def do_addmon(self, arg):
+-        """
+-        Add a monster
+-        Syntax: addmon name hp <number> coords <x> <y> hello "Message"
+-        """
+-        try:
+-            tokens = arg.split(' ')
+-            name = tokens[0]
+-            hp_idx = tokens.index("hp")
+-            coords_idx = tokens.index("coords")
+-            hello_idx = tokens.index("hello")
+-            hp = int(tokens[hp_idx + 1])
+-            x = int(tokens[coords_idx + 1])
+-            y = int(tokens[coords_idx + 2])
+-            
+-            idxs = sorted([hp_idx, coords_idx, hello_idx])
+-            idxs.append(None)
+-            lastidx = idxs[idxs.index(hello_idx) + 1]
+-
+-            msg = ' '.join(tokens[hello_idx + 1:lastidx]).strip('"')
+-            add_monster(name, point(x, y), hp, msg)
+-        except Exception as e:
+-            print("Invalid arguments")
++        response += 'noencounter'
+     
+-    def complete_addmon(self, text, line, begidx, endidx):
+-        all_monsters = cowsay.list_cows() + list(customMonsters.keys())
+-        if len(line.split(' ')) < 3:
+-            return [name for name in all_monsters if name.startswith(text)]
+-        else:
+-            return [name for name in ['coords', 'hello', 'hp'] if name.startswith(text)]
+-    
+-    def do_attack(self, arg):
+-        "Attack a monster"
+-        global playerPos
+-        monster = mesh[playerPos.y][playerPos.x]
+-        
+-        try:
+-            tokens = arg.split(' ')
+-            name = tokens[0]
+-
+-            if not name:
+-                print("Invalid arguments")
+-                return
+-            if not monster or monster.name != name:
+-                print(f'No {name} here')
+-                return
+-            
+-            
+-            if tokens[1] == 'with':
+-                if tokens[2] not in weaponsDmg:
+-                    print('Unknown weapon')
+-                    return
+-                damage = min(weaponsDmg[tokens[2]], monster.hp)
+-            else:
+-                damage = min(weaponsDmg['sword'], monster.hp)
++    return response
+ 
+-            monster.hp -= damage
+-            print(f'Attacked {monster.name},  damage {damage} hp')
+-            if monster.hp == 0:
+-                print(f'{monster.name} died')
+-                mesh[playerPos.y][playerPos.x] = None
+-            else:
+-                print(f'{monster.name} now has {monster.hp}')
+-        except Exception as e:
+-            print("Invalid arguments")
+-
+-    def complete_attack(self, text, line, begidx, endidx):
+-        all_monsters = cowsay.list_cows() + list(customMonsters.keys())
+-        if len(line.split(' ')) == 2:
+-            return [name for name in all_monsters if name.startswith(text)]
+-        elif len(line.split(' ')) == 3:
+-            return ['with']
+-        else:
+-            return [name for name in list(weaponsDmg.keys()) if name.startswith(text)]
+-        
+-
+-def main():
+-    add_custom()
+-    
+-    MUD().cmdloop()
++def addmon(name, x, y, hp, msg):
++    if mesh[y][x]:
++        response = 'replaced'
++    else:
++        response = 'nonreplaced'
++    mesh[y][x] = entity(name, hp, msg)
++    return response
+ 
+-    # for line in sys.stdin:
+-    #     line = line.strip()
+-    #     if not line:
+-    #         continue
+-        
+-    #     shlex(line)
+ 
+-if __name__ == "__main__":
+-    main()
+\ No newline at end of file
++def attack(name, damage):
++    monster = mesh[playerPos.y][playerPos.x]
++    if not monster or monster.name != name:
++        response = 'nomonster'
++    else:
++        damage = min(damage, monster.hp)
++        monster.hp -= damage
++        response = f'{damage} {monster.hp}'
++        if monster.hp == 0:
++            mesh[playerPos.y][playerPos.x] = None
++
++    return response
++
++async def handle_client(reader, writer):
++    while data := await reader.readline():
++        cmd = data.decode().strip().split(' ')
++        if not cmd:
++            continue
++        if cmd[0] == "move":
++            response = move_player(int(cmd[1]), int(cmd[2]))
++        elif cmd[0] == "addmon":
++            name, x, y, hp, *msg = cmd[1:]
++            response = addmon(name, int(x), int(y), int(hp), ' '.join(msg))
++        elif cmd[0] == "attack":
++            name, damage = cmd[1], int(cmd[2])
++            response = attack(name, damage)
++
++        writer.write((response + '\n').encode())
++        await writer.drain()
++    writer.close()
++
++async def main():
++    server = await asyncio.start_server(handle_client, 'localhost', 1337)
++    async with server:
++        await server.serve_forever()
++
++asyncio.run(main())
+\ No newline at end of file
+-- 
+2.46.0.windows.1
+
