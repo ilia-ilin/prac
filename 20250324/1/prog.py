@@ -16,6 +16,7 @@ class entity:
 #point(x, y)
 mesh = [(10 * [None]) for _ in range(10)]
 playerPos = point(0, 0)
+players = {}
 
 def move_player(dx, dy):
     global playerPos
@@ -53,6 +54,17 @@ def attack(name, damage):
     return response
 
 async def handle_client(reader, writer):
+    me = await reader.readline()
+    me = me.decode().strip()
+    
+    if me in players:
+        writer.write(('error\n').encode())
+        writer.close()
+        return
+    else:
+        writer.write(('accept\n').encode())
+        players[me] = asyncio.Queue()
+
     while data := await reader.readline():
         cmd = data.decode().strip().split(' ')
         if not cmd:

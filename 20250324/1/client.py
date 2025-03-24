@@ -1,5 +1,6 @@
 #MUD-client
 import asyncio
+import sys
 import cmd
 import cowsay
 from io import StringIO
@@ -39,14 +40,29 @@ class MUD(cmd.Cmd):
         self.loop = asyncio.get_event_loop()
         self.reader = None
         self.writer = None
+        self.playerName = sys.argv[1]
     
     def preloop(self):
-       self.loop.run_until_complete(self.init_connection())
+        self.loop.run_until_complete(self.init_connection())
+        self.loop.run_until_complete(self._preloop())
+
+    async def _preloop(self):
+        resp = await self.send_recieve(self.playerName)
+        if resp == 'error':
+            print('Player already exist!')
+            exit(0)
+
 
     async def init_connection(self):
         self.reader, self.writer = await asyncio.open_connection('localhost', 1337)
 
     async def send(self, msg):
+        self.writer.write((msg + '\n').encode())
+        await self.writer.drain()
+        data = await self.reader.readline() #rm
+        return data.decode().strip()        #rm
+
+    async def send_recieve(self, msg):
         self.writer.write((msg + '\n').encode())
         await self.writer.drain()
         data = await self.reader.readline()
@@ -164,6 +180,10 @@ class MUD(cmd.Cmd):
             return [name for name in list(weaponsDmg.keys()) if name.startswith(text)]
         
 def main():
+    if len(sys.argv) < 2:
+        print("Get name!")
+        return
+
     MUD().cmdloop()
 
 if __name__ == '__main__':
