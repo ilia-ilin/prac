@@ -3,8 +3,9 @@ import asyncio
 import sys
 import cmd
 import cowsay
+import readline
+import threading
 from io import StringIO
-
 
 weaponsDmg = { 'sword': 10, 'spear': 15, 'axe': 20 }
 customMonsters = {
@@ -25,74 +26,48 @@ EOC
 """))
 }
 
-def encounter(name, msg):
-    if name in cowsay.list_cows():
-        print(cowsay.cowsay(msg, cow=name))
-    else:
-        print(cowsay.cowsay(msg, cowfile=customMonsters[name]))
-
 class MUD(cmd.Cmd):
     intro = '<<< Welcome to Python-MUD 0.1 >>>'
     prompt = 'MUD>> '
 
     def __init__(self):
         super().__init__()
-        self.loop = asyncio.get_event_loop()
-        self.reader = None
-        self.writer = None
         self.playerName = sys.argv[1]
+        self.chat_loop = None
+        self.chat_queue = None
     
     def preloop(self):
-        self.loop.run_until_complete(self.init_connection())
-        self.loop.run_until_complete(self._preloop())
+        pass
+        # self.loop.run_until_complete(self._preloop())
 
-    async def _preloop(self):
-        resp = await self.send_recieve(self.playerName)
-        if resp == 'error':
-            print('Player already exist!')
-            exit(0)
-
-
-    async def init_connection(self):
-        self.reader, self.writer = await asyncio.open_connection('localhost', 1337)
-
-    async def send(self, msg):
-        self.writer.write((msg + '\n').encode())
-        await self.writer.drain()
-        data = await self.reader.readline() #rm
-        return data.decode().strip()        #rm
-
-    async def send_recieve(self, msg):
-        self.writer.write((msg + '\n').encode())
-        await self.writer.drain()
-        data = await self.reader.readline()
-        return data.decode().strip()
+    # async def _preloop(self):
+    #     pass
+    
+    def send(self, msg: str):
+        if self.chat_loop and self.chat_queue:
+            self.chat_loop.call_soon_threadsafe(
+                self.chat_queue.put_nowait, 
+                msg
+            ) 
 
     def do_up(self, arg):
         "Move up"
-        self.loop.run_until_complete(self._move_player(0, -1))
+        self.move_player(0, -1)
 
     def do_down(self, arg):
         "Move down"
-        self.loop.run_until_complete(self._move_player(0, 1))
+        self.move_player(0, 1)
 
     def do_left(self, arg):
         "Move left"
-        self.loop.run_until_complete(self._move_player(-1, 0))
+        self.move_player(-1, 0)
 
     def do_right(self, arg):
         "Move right"
-        self.loop.run_until_complete(self._move_player(1, 0))
+        self.move_player(1, 0)
 
-    async def _move_player(self, dx, dy):
-        resp = await self.send(f"move {dx} {dy}")
-        x, y, *data = resp.split(' ')
-        print(f'Moved to ({x}, {y})') 
-        if data[0] != 'noencounter':
-            name, *msg = data
-            msg = ' '.join(msg)
-            encounter(name, msg)
-
+    def move_player(self, dx, dy):
+        self.send(f"move {dx} {dy}")
 
     def do_addmon(self, arg):
         """
@@ -119,15 +94,9 @@ class MUD(cmd.Cmd):
                 print('Cannot add unknown monster')
                 return
             
-            self.loop.run_until_complete(self._addmon(name, int(x), int(y), int(hp), msg))
+            self.send(f"addmon {name} {x} {y} {hp} {msg}")
         except Exception as e:
             print("Invalid arguments")
-    
-    async def _addmon(self, name, x, y, hp, msg):
-        resp = await self.send(f"addmon {name} {x} {y} {hp} {msg}")
-        print(f'Added monster {name} to ({x}, {y}) saying {msg}')
-        if resp == 'replaced':
-            print('Replaced the old monster')
 
     def complete_addmon(self, text, line, begidx, endidx):
         all_monsters = cowsay.list_cows() + list(customMonsters.keys())
@@ -153,22 +122,9 @@ class MUD(cmd.Cmd):
                     return
                 damage = weaponsDmg[tokens[2]]
                 
-            
-            self.loop.run_until_complete(self._attack(name, damage))
+            self.send(f"attack {name} {damage}")
         except Exception as e:
             print("Invalid arguments")
-    
-    async def _attack(self, name, damage):
-        resp = await self.send(f"attack {name} {damage}")
-        if resp == 'nomonster':
-            print(f'No {name} here')
-        else:
-            damage, hp = resp.split(' ', 1)
-            print(f'Attacked {name},  damage {damage} hp')
-            if hp == '0':
-                print(f'{name} died')
-            else:
-                print(f'{name} now has {hp}')
 
     def complete_attack(self, text, line, begidx, endidx):
         all_monsters = cowsay.list_cows() + list(customMonsters.keys())
@@ -178,13 +134,62 @@ class MUD(cmd.Cmd):
             return ['with']
         else:
             return [name for name in list(weaponsDmg.keys()) if name.startswith(text)]
-        
+
+async def local_srv(cmdline: MUD):
+    reader, writer = await asyncio.open_connection('localhost', 1337)
+
+    writer.write((f'{sys.argv[1]}\n').encode())
+    resp = await reader.readline()
+    resp = resp.decode().strip()
+    if resp == 'error':
+        print('Player already exist!')
+        writer.close()
+        await writer.wait_closed()
+        exit(0)
+    send_task = asyncio.create_task(cmdline.chat_queue.get())
+    receive_task = asyncio.create_task(reader.readline())
+
+    try:
+        while True:
+            done, pending = await asyncio.wait(
+                [send_task, receive_task],
+                return_when=asyncio.FIRST_COMPLETED
+            )
+            
+            for task in done:
+                if task is send_task:
+                    data = task.result()
+                    writer.write(f"{data}\n".encode())
+                    await writer.drain()
+                    send_task = asyncio.create_task(cmdline.chat_queue.get())
+                    
+                elif task is receive_task:
+                    response = task.result().decode().strip()
+                    print(f'{response}\n{cmdline.prompt}{readline.get_line_buffer()}', end='', flush=True)
+                    receive_task = asyncio.create_task(reader.readline())
+                    
+    finally:
+        send_task.cancel()
+        receive_task.cancel()
+        writer.close()
+        await writer.wait_closed()
+
+def run_local_srv_in_thread(mud: MUD):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    mud.chat_queue = asyncio.Queue()
+    mud.chat_loop = loop
+    loop.run_until_complete(local_srv(mud))
+
 def main():
     if len(sys.argv) < 2:
         print("Get name!")
         return
 
-    MUD().cmdloop()
+    cmdline = MUD()
+    thread = threading.Thread(target=run_local_srv_in_thread, args=(cmdline,))
+    thread.start()
+    cmdline.cmdloop()
 
 if __name__ == '__main__':
     main()

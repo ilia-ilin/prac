@@ -1,5 +1,7 @@
 #MUD-server
 import asyncio
+import cowsay
+from io import StringIO
 
 class point:
     def __init__(self, x, y):
@@ -14,69 +16,89 @@ class entity:
 
 #mesh[y][x]
 #point(x, y)
+
 mesh = [(10 * [None]) for _ in range(10)]
-playerPos = point(0, 0)
 players = {}
+customMonsters = {
+    "jgsbat" : cowsay.read_dot_cow(StringIO(r"""
+$the_cow = <<EOC;
+         $thoughts
+          $thoughts
+    ,_                    _,
+    ) '-._  ,_    _,  _.-' (
+    )  _.-'.|\\\\--//|.'-._  (
+     )'   .'\\/o\\/o\\/'.   `(
+      ) .' . \\====/ . '. (
+       )  / <<    >> \\  (
+        '-._/``  ``\\_.-'
+  jgs     __\\\\'--'//__
+         (((""`  `"")))
+EOC
+"""))
+}
 
-def move_player(dx, dy):
-    global playerPos
-    newpos = point((playerPos.x + dx + 10) % 10, (playerPos.y + dy + 10) % 10)
-    playerPos = newpos
-    response = f'{newpos.x} {newpos.y} '
-
-    if mesh[newpos.y][newpos.x]:
-        response += f'{mesh[newpos.y][newpos.x].name} {mesh[newpos.y][newpos.x].msg}'
+def encounter(name, msg):
+    if name in cowsay.list_cows():
+        return cowsay.cowsay(msg, cow=name)
     else:
-        response += 'noencounter'
+        return cowsay.cowsay(msg, cowfile=customMonsters[name])
+
+def move_player(player, dx, dy):
+    players[player] = point((players[player].x + dx + 10) % 10, (players[player].y + dy + 10) % 10)
+    response = f'Moved to ({players[player].x}, {players[player].y})'
+
+    if mesh[players[player].y][players[player].x]:
+        response += f'\n{encounter(mesh[players[player].y][players[player].x].name, mesh[players[player].y][players[player].x].msg)}'
     
     return response
 
 def addmon(name, x, y, hp, msg):
+    response = f'Added monster {name} to ({x}, {y}) saying {msg}'
     if mesh[y][x]:
-        response = 'replaced'
-    else:
-        response = 'nonreplaced'
+        response += 'Replaced the old monster'
     mesh[y][x] = entity(name, hp, msg)
     return response
 
-
-def attack(name, damage):
-    monster = mesh[playerPos.y][playerPos.x]
+def attack(player, name, damage):
+    monster = mesh[players[player].y][players[player].x]
     if not monster or monster.name != name:
-        response = 'nomonster'
+        response = f'No {name} here'
     else:
         damage = min(damage, monster.hp)
         monster.hp -= damage
-        response = f'{damage} {monster.hp}'
+        response = f'Attacked {name},  damage {damage} hp'
         if monster.hp == 0:
-            mesh[playerPos.y][playerPos.x] = None
+            response += f'\n{name} died'
+            mesh[players[player].y][players[player].x] = None
+        else:
+            response += f'\n{name} now has {monster.hp}'
 
     return response
 
 async def handle_client(reader, writer):
     me = await reader.readline()
     me = me.decode().strip()
-    
+
     if me in players:
         writer.write(('error\n').encode())
         writer.close()
         return
     else:
         writer.write(('accept\n').encode())
-        players[me] = asyncio.Queue()
+        players[me] = point(0, 0)
 
     while data := await reader.readline():
         cmd = data.decode().strip().split(' ')
         if not cmd:
             continue
         if cmd[0] == "move":
-            response = move_player(int(cmd[1]), int(cmd[2]))
+            response = move_player(me, int(cmd[1]), int(cmd[2]))
         elif cmd[0] == "addmon":
             name, x, y, hp, *msg = cmd[1:]
             response = addmon(name, int(x), int(y), int(hp), ' '.join(msg))
         elif cmd[0] == "attack":
             name, damage = cmd[1], int(cmd[2])
-            response = attack(name, damage)
+            response = attack(me, name, damage)
 
         writer.write((response + '\n').encode())
         await writer.drain()
