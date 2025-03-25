@@ -146,7 +146,12 @@ class MUD(cmd.Cmd):
             return [name for name in list(weaponsDmg.keys()) if name.startswith(text)]
 
 async def local_srv(cmdline: MUD):
-    reader, writer = await asyncio.open_connection('localhost', 1337)
+    try:
+        reader, writer = await asyncio.open_connection('localhost', 1337)
+    except:
+        cmdline.close_event.set()
+        print('server is closed!')
+        exit(0)
 
     writer.write((f'{sys.argv[1]}\n').encode())
     resp = await reader.readline()
