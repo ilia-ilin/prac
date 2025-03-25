@@ -32,23 +32,33 @@ class MUD(cmd.Cmd):
 
     def __init__(self):
         super().__init__()
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
         self.playerName = sys.argv[1]
-        self.chat_loop = None
-        self.chat_queue = None
+        self.local_srv_loop = None
+        self.local_srv_queue = None
+        self.close_event = None
     
     def preloop(self):
         pass
-        # self.loop.run_until_complete(self._preloop())
+        #self.loop.run_until_complete(self._preloop())
 
     # async def _preloop(self):
-    #     pass
+    #     self.srv_closed()
+    
+    def postcmd(self, stop, line):
+        if self.close_event.is_set():
+            return True
+        return super().postcmd(stop, line)
     
     def send(self, msg: str):
-        if self.chat_loop and self.chat_queue:
-            self.chat_loop.call_soon_threadsafe(
-                self.chat_queue.put_nowait, 
+        if self.local_srv_loop and self.local_srv_queue:
+            self.local_srv_loop.call_soon_threadsafe(
+                self.local_srv_queue.put_nowait, 
                 msg
             ) 
+        else:
+            exit(0)
 
     def do_up(self, arg):
         "Move up"
@@ -141,12 +151,15 @@ async def local_srv(cmdline: MUD):
     writer.write((f'{sys.argv[1]}\n').encode())
     resp = await reader.readline()
     resp = resp.decode().strip()
+
     if resp == 'error':
+        cmdline.close_event.set()
         print('Player already exist!')
         writer.close()
         await writer.wait_closed()
         exit(0)
-    send_task = asyncio.create_task(cmdline.chat_queue.get())
+
+    send_task = asyncio.create_task(cmdline.local_srv_queue.get())
     receive_task = asyncio.create_task(reader.readline())
 
     try:
@@ -161,25 +174,34 @@ async def local_srv(cmdline: MUD):
                     data = task.result()
                     writer.write(f"{data}\n".encode())
                     await writer.drain()
-                    send_task = asyncio.create_task(cmdline.chat_queue.get())
+                    send_task = asyncio.create_task(cmdline.local_srv_queue.get())
                     
                 elif task is receive_task:
                     response = task.result().decode().strip()
-                    print(f'{response}\n{cmdline.prompt}{readline.get_line_buffer()}', end='', flush=True)
+                    if response == 'closed':
+                        cmdline.close_event.set()
+                        print('Server closed!')
+                        raise Exception('close')
+
+                    print(f'\n{response.replace('\\n', '\n')}\n{cmdline.prompt}{readline.get_line_buffer()}', end='', flush=True)
                     receive_task = asyncio.create_task(reader.readline())
-                    
+
+    except Exception as e:
+        if e.args[0] != 'close':
+            print(e)              
     finally:
         send_task.cancel()
         receive_task.cancel()
         writer.close()
         await writer.wait_closed()
 
-def run_local_srv_in_thread(mud: MUD):
+def run_local_srv_in_thread(cmdline: MUD):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    mud.chat_queue = asyncio.Queue()
-    mud.chat_loop = loop
-    loop.run_until_complete(local_srv(mud))
+    cmdline.local_srv_queue = asyncio.Queue()
+    cmdline.local_srv_loop = loop
+    cmdline.close_event = threading.Event()
+    loop.run_until_complete(local_srv(cmdline))
 
 def main():
     if len(sys.argv) < 2:

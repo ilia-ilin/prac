@@ -76,33 +76,37 @@ def attack(player, name, damage):
     return response
 
 async def handle_client(reader, writer):
-    me = await reader.readline()
-    me = me.decode().strip()
+    try:
+        me = await reader.readline()
+        me = me.decode().strip()
 
-    if me in players:
-        writer.write(('error\n').encode())
-        writer.close()
-        return
-    else:
-        writer.write(('accept\n').encode())
-        players[me] = point(0, 0)
+        if me in players:
+            writer.write(('error\n').encode())
+            writer.close()
+            return
+        else:
+            writer.write(('accept\n').encode())
+            players[me] = point(0, 0)
 
-    while data := await reader.readline():
-        cmd = data.decode().strip().split(' ')
-        if not cmd:
-            continue
-        if cmd[0] == "move":
-            response = move_player(me, int(cmd[1]), int(cmd[2]))
-        elif cmd[0] == "addmon":
-            name, x, y, hp, *msg = cmd[1:]
-            response = addmon(name, int(x), int(y), int(hp), ' '.join(msg))
-        elif cmd[0] == "attack":
-            name, damage = cmd[1], int(cmd[2])
-            response = attack(me, name, damage)
+        while data := await reader.readline():
+            cmd = data.decode().strip().split(' ')
+            if not cmd:
+                continue
+            if cmd[0] == "move":
+                response = move_player(me, int(cmd[1]), int(cmd[2]))
+            elif cmd[0] == "addmon":
+                name, x, y, hp, *msg = cmd[1:]
+                response = addmon(name, int(x), int(y), int(hp), ' '.join(msg))
+            elif cmd[0] == "attack":
+                name, damage = cmd[1], int(cmd[2])
+                response = attack(me, name, damage)
 
-        writer.write((response + '\n').encode())
+            writer.write((response.replace('\n', '\\n') + '\n').encode())
+            await writer.drain()
+    finally:
+        writer.write(('closed\n').encode())
         await writer.drain()
-    writer.close()
+        writer.close()
 
 async def main():
     server = await asyncio.start_server(handle_client, 'localhost', 1337)
