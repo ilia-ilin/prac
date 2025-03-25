@@ -59,12 +59,14 @@ def move_player(player : str, dx, dy):
     
     return response
 
-def addmon(name, x, y, hp, msg):
+def addmon(player, name, x, y, hp, msg):
     response = f'Added monster {name} to ({x}, {y}) saying {msg}'
+    response_all = f'{player} added monster {name} saying {msg}'
     if mesh[y][x]:
-        response += 'Replaced the old monster'
+        response += '\nReplaced the old monster'
+        response_all += '\nReplaced the old monster'
     mesh[y][x] = entity(name, hp, msg)
-    return response
+    return (response, response_all)
 
 def attack(player, name, damage):
     monster = mesh[players[player].coords.y][players[player].coords.x]
@@ -121,7 +123,7 @@ async def handle_client(reader, writer):
                         response = move_player(me, int(cmd[1]), int(cmd[2]))
                     elif cmd[0] == "addmon":
                         name, x, y, hp, *msg = cmd[1:]
-                        response = addmon(name, int(x), int(y), int(hp), ' '.join(msg))
+                        response, response_all = addmon(me, name, int(x), int(y), int(hp), ' '.join(msg))
                     elif cmd[0] == "attack":
                         name, damage = cmd[1], int(cmd[2])
                         response, response_all = attack(me, name, damage)
