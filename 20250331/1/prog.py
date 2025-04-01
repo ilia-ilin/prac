@@ -61,7 +61,7 @@ def move_player(player : str, dx, dy):
 
 def addmon(player, name, x, y, hp, msg):
     response = f'Added monster {name} to ({x}, {y}) saying {msg}'
-    response_all = f'{player} added monster {name} saying {msg}'
+    response_all = f'{player}: added monster {name} saying {msg}'
     if mesh[y][x]:
         response += '\nReplaced the old monster'
         response_all += '\nReplaced the old monster'
@@ -77,7 +77,7 @@ def attack(player, name, damage):
         damage = min(damage, monster.hp)
         monster.hp -= damage
         response = f'Attacked {name},  damage {damage} hp'
-        response_all = f'{player} attacked {name},  damage {damage} hp'
+        response_all = f'{player}: attacked {name},  damage {damage} hp'
         if monster.hp == 0:
             response += f'\n{name} died'
             response_all += f'\n{name} died'
@@ -127,7 +127,12 @@ async def handle_client(reader, writer):
                     elif cmd[0] == "attack":
                         name, damage = cmd[1], int(cmd[2])
                         response, response_all = attack(me, name, damage)
-                    writer.write((response.replace('\n', '\\n') + '\n').encode())
+                    elif cmd[0] == "sayall":
+                        msg = ' '.join(cmd[1:])
+                        response = None
+                        response_all = f'{me}: {msg}'
+                    if response:
+                        writer.write((response.replace('\n', '\\n') + '\n').encode())
                     await writer.drain()
                     if response_all:
                         for p in players:

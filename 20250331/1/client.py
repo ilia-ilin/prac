@@ -144,6 +144,19 @@ class MUD(cmd.Cmd):
             return ['with']
         else:
             return [name for name in list(weaponsDmg.keys()) if name.startswith(text)]
+        
+    def do_sayall(self, arg):
+        "Say all"
+        try:
+            if ' ' in arg:
+                if '"' == arg[0] and '"' == arg[-1]:
+                    self.send(f"sayall {arg[1:-1]}")
+                else:
+                    print("Invalid arguments")
+            else:
+                self.send(f"sayall {arg}")
+        except Exception as e:
+            print(e.args)
 
 async def local_srv(cmdline: MUD):
     try:
