@@ -1,12 +1,16 @@
-#MUD-server
+# MUD-server
 import asyncio
 import cowsay
 from io import StringIO
 
+
+# mesh[y][x]
+# point(x, y)
 class point:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+
 
 class entity:
     def __init__(self, name: str, hp: int, msg: str) -> None:
@@ -14,18 +18,17 @@ class entity:
         self.hp = hp
         self.msg = msg
 
+
 class player:
     def __init__(self, queue: asyncio.Queue):
         self.coords = point(0, 0)
         self.queue = queue
 
-#mesh[y][x]
-#point(x, y)
 
 mesh = [(10 * [None]) for _ in range(10)]
 players = {}
 customMonsters = {
-    "jgsbat" : cowsay.read_dot_cow(StringIO(r"""
+    "jgsbat": cowsay.read_dot_cow(StringIO(r"""
 $the_cow = <<EOC;
          $thoughts
           $thoughts
@@ -42,22 +45,26 @@ EOC
 """))
 }
 
-def encounter(name, msg):
+
+def encounter(name, msg) -> str:
     if name in cowsay.list_cows():
         return cowsay.cowsay(msg, cow=name)
     else:
         return cowsay.cowsay(msg, cowfile=customMonsters[name])
 
-def move_player(player : str, dx, dy):
+
+def move_player(player: str, dx, dy):
     coords = players[player].coords
     coords = point((coords.x + dx + 10) % 10, (coords.y + dy + 10) % 10)
     players[player].coords = coords
     response = f'Moved to ({coords.x}, {coords.y})'
 
     if mesh[coords.y][coords.x]:
-        response += f'\n{encounter(mesh[coords.y][coords.x].name, mesh[coords.y][coords.x].msg)}'
-    
+        response += '\n' + encounter(
+            mesh[coords.y][coords.x].name,
+            mesh[coords.y][coords.x].msg)
     return response
+
 
 def addmon(player, name, x, y, hp, msg):
     response = f'Added monster {name} to ({x}, {y}) saying {msg}'
@@ -67,6 +74,7 @@ def addmon(player, name, x, y, hp, msg):
         response_all += '\nReplaced the old monster'
     mesh[y][x] = entity(name, hp, msg)
     return (response, response_all)
+
 
 def attack(player, name, damage):
     monster = mesh[players[player].coords.y][players[player].coords.x]
@@ -88,6 +96,7 @@ def attack(player, name, damage):
 
     return (response, response_all)
 
+
 async def handle_client(reader, writer):
     try:
         me = await reader.readline()
@@ -100,7 +109,7 @@ async def handle_client(reader, writer):
         else:
             writer.write(('accept\n').encode())
             players[me] = player(asyncio.Queue())
-        
+
         for p in players:
             if p != me:
                 await players[p].queue.put(f'{me} connected.')
@@ -109,8 +118,10 @@ async def handle_client(reader, writer):
         receive = asyncio.create_task(players[me].queue.get())
 
         while not reader.at_eof():
-            done, pending = await asyncio.wait([send, receive], return_when=asyncio.FIRST_COMPLETED)
-            
+            done, pending = await asyncio.wait(
+                [send, receive],
+                return_when=asyncio.FIRST_COMPLETED)
+
             for q in done:
                 if q is send:
                     send = asyncio.create_task(reader.readline())
@@ -123,7 +134,13 @@ async def handle_client(reader, writer):
                         response = move_player(me, int(cmd[1]), int(cmd[2]))
                     elif cmd[0] == "addmon":
                         name, x, y, hp, *msg = cmd[1:]
-                        response, response_all = addmon(me, name, int(x), int(y), int(hp), ' '.join(msg))
+                        response, response_all = addmon(
+                            me,
+                            name,
+                            int(x),
+                            int(y),
+                            int(hp),
+                            ' '.join(msg))
                     elif cmd[0] == "attack":
                         name, damage = cmd[1], int(cmd[2])
                         response, response_all = attack(me, name, damage)
@@ -132,7 +149,8 @@ async def handle_client(reader, writer):
                         response = None
                         response_all = f'{me}: {msg}'
                     if response:
-                        writer.write((response.replace('\n', '\\n') + '\n').encode())
+                        writer.write(
+                            (response.replace('\n', '\\n') + '\n').encode())
                     await writer.drain()
                     if response_all:
                         for p in players:
@@ -141,7 +159,8 @@ async def handle_client(reader, writer):
                         response_all = None
                 elif q is receive:
                     receive = asyncio.create_task(players[me].queue.get())
-                    writer.write((q.result().replace('\n', '\\n') + '\n').encode())
+                    writer.write(
+                        (q.result().replace('\n', '\\n') + '\n').encode())
                     await writer.drain()
     finally:
         for p in players:
@@ -151,6 +170,7 @@ async def handle_client(reader, writer):
         await writer.drain()
         writer.close()
         del players[me]
+
 
 async def main():
     server = await asyncio.start_server(handle_client, 'localhost', 1337)

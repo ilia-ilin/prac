@@ -1,30 +1,14 @@
-#MUD-client
+# MUD-client
 import asyncio
 import sys
 import cmd
 import cowsay
 import readline
 import threading
-from io import StringIO
 
-weaponsDmg = { 'sword': 10, 'spear': 15, 'axe': 20 }
-customMonsters = {
-    "jgsbat" : cowsay.read_dot_cow(StringIO(r"""
-$the_cow = <<EOC;
-         $thoughts
-          $thoughts
-    ,_                    _,
-    ) '-._  ,_    _,  _.-' (
-    )  _.-'.|\\\\--//|.'-._  (
-     )'   .'\\/o\\/o\\/'.   `(
-      ) .' . \\====/ . '. (
-       )  / <<    >> \\  (
-        '-._/``  ``\\_.-'
-  jgs     __\\\\'--'//__
-         (((""`  `"")))
-EOC
-"""))
-}
+weaponsDmg = {'sword': 10, 'spear': 15, 'axe': 20}
+customMonsters = ["jgsbat"]
+
 
 class MUD(cmd.Cmd):
     intro = '<<< Welcome to Python-MUD 0.1 >>>'
@@ -38,25 +22,18 @@ class MUD(cmd.Cmd):
         self.local_srv_loop = None
         self.local_srv_queue = None
         self.close_event = None
-    
-    def preloop(self):
-        pass
-        #self.loop.run_until_complete(self._preloop())
 
-    # async def _preloop(self):
-    #     self.srv_closed()
-    
     def postcmd(self, stop, line):
         if self.close_event.is_set():
             return True
         return super().postcmd(stop, line)
-    
+
     def send(self, msg: str):
         if self.local_srv_loop and self.local_srv_queue:
             self.local_srv_loop.call_soon_threadsafe(
-                self.local_srv_queue.put_nowait, 
+                self.local_srv_queue.put_nowait,
                 msg
-            ) 
+            )
         else:
             exit(0)
 
@@ -93,7 +70,7 @@ class MUD(cmd.Cmd):
             hp = int(tokens[hp_idx + 1])
             x = int(tokens[coords_idx + 1])
             y = int(tokens[coords_idx + 2])
-            
+
             idxs = sorted([hp_idx, coords_idx, hello_idx])
             idxs.append(None)
             lastidx = idxs[idxs.index(hello_idx) + 1]
@@ -103,18 +80,19 @@ class MUD(cmd.Cmd):
             if name not in cowsay.list_cows() and name not in customMonsters:
                 print('Cannot add unknown monster')
                 return
-            
+
             self.send(f"addmon {name} {x} {y} {hp} {msg}")
-        except Exception as e:
+        except Exception:
             print("Invalid arguments")
 
     def complete_addmon(self, text, line, begidx, endidx):
-        all_monsters = cowsay.list_cows() + list(customMonsters.keys())
+        all_monsters = cowsay.list_cows() + customMonsters
         if len(line.split(' ')) < 3:
             return [name for name in all_monsters if name.startswith(text)]
         else:
-            return [name for name in ['coords', 'hello', 'hp'] if name.startswith(text)]
-    
+            return [name for name in ['coords', 'hello', 'hp']
+                    if name.startswith(text)]
+
     def do_attack(self, arg):
         "Attack a monster"
         try:
@@ -123,7 +101,7 @@ class MUD(cmd.Cmd):
             if not name:
                 print("Invalid arguments")
                 return
-            
+
             if len(tokens) == 1:
                 damage = weaponsDmg['sword']
             elif tokens[1] == 'with':
@@ -131,20 +109,21 @@ class MUD(cmd.Cmd):
                     print('Unknown weapon')
                     return
                 damage = weaponsDmg[tokens[2]]
-                
+
             self.send(f"attack {name} {damage}")
-        except Exception as e:
+        except Exception:
             print("Invalid arguments")
 
     def complete_attack(self, text, line, begidx, endidx):
-        all_monsters = cowsay.list_cows() + list(customMonsters.keys())
+        all_monsters = cowsay.list_cows() + customMonsters
         if len(line.split(' ')) == 2:
             return [name for name in all_monsters if name.startswith(text)]
         elif len(line.split(' ')) == 3:
             return ['with']
         else:
-            return [name for name in list(weaponsDmg.keys()) if name.startswith(text)]
-        
+            return [name for name in list(weaponsDmg.keys())
+                    if name.startswith(text)]
+
     def do_sayall(self, arg):
         "Say all"
         try:
@@ -158,10 +137,11 @@ class MUD(cmd.Cmd):
         except Exception as e:
             print(e.args)
 
+
 async def local_srv(cmdline: MUD):
     try:
         reader, writer = await asyncio.open_connection('localhost', 1337)
-    except:
+    except Exception:
         cmdline.close_event.set()
         print('server is closed!')
         exit(0)
@@ -186,32 +166,38 @@ async def local_srv(cmdline: MUD):
                 [send_task, receive_task],
                 return_when=asyncio.FIRST_COMPLETED
             )
-            
+
             for task in done:
                 if task is send_task:
                     data = task.result()
                     writer.write(f"{data}\n".encode())
                     await writer.drain()
-                    send_task = asyncio.create_task(cmdline.local_srv_queue.get())
-                    
+                    send_task = asyncio.create_task(
+                        cmdline.local_srv_queue.get()
+                        )
+
                 elif task is receive_task:
                     response = task.result().decode().strip()
                     if response == 'closed':
                         cmdline.close_event.set()
                         print('Server closed!')
                         raise Exception('close')
-
-                    print(f'\n{response.replace('\\n', '\n')}\n{cmdline.prompt}{readline.get_line_buffer()}', end='', flush=True)
+                    
+                    toPrint = f'\n{response.replace('\\n', '\n')}\n'
+                    toPrint += cmdline.prompt
+                    toPrint += readline.get_line_buffer()
+                    print(toPrint, end='', flush=True)
                     receive_task = asyncio.create_task(reader.readline())
 
     except Exception as e:
         if e.args[0] != 'close':
-            print(e)              
+            print(e)
     finally:
         send_task.cancel()
         receive_task.cancel()
         writer.close()
         await writer.wait_closed()
+
 
 def run_local_srv_in_thread(cmdline: MUD):
     loop = asyncio.new_event_loop()
@@ -220,6 +206,7 @@ def run_local_srv_in_thread(cmdline: MUD):
     cmdline.local_srv_loop = loop
     cmdline.close_event = threading.Event()
     loop.run_until_complete(local_srv(cmdline))
+
 
 def main():
     if len(sys.argv) < 2:
@@ -230,6 +217,7 @@ def main():
     thread = threading.Thread(target=run_local_srv_in_thread, args=(cmdline,))
     thread.start()
     cmdline.cmdloop()
+
 
 if __name__ == '__main__':
     main()
