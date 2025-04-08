@@ -132,11 +132,12 @@ async def monster_timer():
                 response_all = monsters[new_coords].name
                 response_all += ' moved one cell '
                 response_all += d
-                # ------------------------------
-                response_all += f'({new_coords.x}, {new_coords.y})'
-                # ------------------------------
                 for p in players:
                     await players[p].queue.put(response_all)
+                    if players[p].coords == new_coords:
+                        await players[p].queue.put(encounter(
+                            monsters[new_coords].name,
+                            monsters[new_coords].msg))
                 break
 
 
