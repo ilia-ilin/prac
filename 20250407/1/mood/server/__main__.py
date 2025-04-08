@@ -1,15 +1,22 @@
 # MUD-server
 import asyncio
 import cowsay
+import random
 from io import StringIO
 
 
-# mesh[y][x]
-# point(x, y)
 class point:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+
+    def __eq__(self, other):
+        if isinstance(other, point):
+            return self.x == other.x and self.y == other.y
+        return False
+
+    def __hash__(self):
+        return hash((self.x, self.y))
 
 
 class entity:
@@ -25,8 +32,14 @@ class player:
         self.queue = queue
 
 
-mesh = [(10 * [None]) for _ in range(10)]
-players = {}
+monsters = {}   # coords: entity
+players = {}    # name: player
+directions = {
+    'up': point(0, -1),
+    'down': point(0, 1),
+    'left': point(-1, 0),
+    'right': point(1, 0)
+}
 customMonsters = {
     "jgsbat": cowsay.read_dot_cow(StringIO(r"""
 $the_cow = <<EOC;
@@ -46,6 +59,10 @@ EOC
 }
 
 
+def add_mod_10(p1: point, p2: point) -> point:
+    return point((p1.x + p2.x) % 10, (p1.y + p2.y) % 10)
+
+
 def encounter(name, msg) -> str:
     if name in cowsay.list_cows():
         return cowsay.cowsay(msg, cow=name)
@@ -53,31 +70,33 @@ def encounter(name, msg) -> str:
         return cowsay.cowsay(msg, cowfile=customMonsters[name])
 
 
-def move_player(player: str, dx, dy):
-    coords = players[player].coords
-    coords = point((coords.x + dx + 10) % 10, (coords.y + dy + 10) % 10)
+def move_player(player: str, dx: int, dy: int) -> str:
+    coords = add_mod_10(players[player].coords, point(dx, dy))
     players[player].coords = coords
     response = f'Moved to ({coords.x}, {coords.y})'
 
-    if mesh[coords.y][coords.x]:
+    if coords in monsters:
         response += '\n' + encounter(
-            mesh[coords.y][coords.x].name,
-            mesh[coords.y][coords.x].msg)
+            monsters[coords].name,
+            monsters[coords].msg)
+
     return response
 
 
-def addmon(player, name, x, y, hp, msg):
-    response = f'Added monster {name} to ({x}, {y}) saying {msg}'
+def addmon(player: str, name: str, coords: point, hp: int, msg: str):
+    response = f'Added monster {name} to ({coords.x}, {coords.y}) saying {msg}'
     response_all = f'{player}: added monster {name} saying {msg}'
-    if mesh[y][x]:
+
+    if coords in monsters:
         response += '\nReplaced the old monster'
         response_all += '\nReplaced the old monster'
-    mesh[y][x] = entity(name, hp, msg)
+    monsters[coords] = entity(name, hp, msg)
+
     return (response, response_all)
 
 
 def attack(player, name, damage):
-    monster = mesh[players[player].coords.y][players[player].coords.x]
+    monster = monsters[players[player].coords]
     response_all = None
     if not monster or monster.name != name:
         response = f'No {name} here'
@@ -89,7 +108,7 @@ def attack(player, name, damage):
         if monster.hp == 0:
             response += f'\n{name} died'
             response_all += f'\n{name} died'
-            mesh[players[player].coords.y][players[player].coords.x] = None
+            del monsters[players[player].coords]
         else:
             response += f'\n{name} now has {monster.hp}'
             response_all += f'\n{name} now has {monster.hp}'
@@ -97,7 +116,31 @@ def attack(player, name, damage):
     return (response, response_all)
 
 
-async def handle_client(reader, writer):
+async def monster_timer():
+    while True:
+        await asyncio.sleep(30)
+        if monsters.values():
+            while True:
+                rnd_monster_coords = random.choice(list(monsters.keys()))
+                d = list(directions.keys())[random.randrange(4)]
+                new_coords = add_mod_10(rnd_monster_coords, directions[d])
+                if new_coords in monsters:
+                    continue
+                monsters[new_coords] = monsters[rnd_monster_coords]
+                del monsters[rnd_monster_coords]
+
+                response_all = monsters[new_coords].name
+                response_all += ' moved one cell '
+                response_all += d
+                # ------------------------------
+                response_all += f'({new_coords.x}, {new_coords.y})'
+                # ------------------------------
+                for p in players:
+                    await players[p].queue.put(response_all)
+                break
+
+
+async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
     try:
         me = await reader.readline()
         me = me.decode().strip()
@@ -137,8 +180,7 @@ async def handle_client(reader, writer):
                         response, response_all = addmon(
                             me,
                             name,
-                            int(x),
-                            int(y),
+                            point(int(x), int(y)),
                             int(hp),
                             ' '.join(msg))
                     elif cmd[0] == "attack":
@@ -174,6 +216,7 @@ async def handle_client(reader, writer):
 
 async def main():
     server = await asyncio.start_server(handle_client, 'localhost', 1337)
+    asyncio.create_task(monster_timer())
     async with server:
         await server.serve_forever()
 

@@ -182,7 +182,7 @@ async def local_srv(cmdline: MUD):
                         cmdline.close_event.set()
                         print('Server closed!')
                         raise Exception('close')
-                    
+
                     toPrint = f'\n{response.replace('\\n', '\n')}\n'
                     toPrint += cmdline.prompt
                     toPrint += readline.get_line_buffer()
