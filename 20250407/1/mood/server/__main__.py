@@ -1,3 +1,14 @@
+"""
+MUD-сервер для текстовой многопользовательской игры.
+
+Сервер реализует следующую функциональность:
+- Управление игровым полем 10x10 с телепортацией через границы
+- Обработка перемещений игроков и взаимодействия с монстрами
+- Сетевой интерфейс для подключения клиентов через TCP
+- Периодическое перемещение монстров по полю
+- Система чата между игроками
+"""
+
 # MUD-server
 import asyncio
 import cowsay
@@ -6,20 +17,35 @@ from io import StringIO
 
 
 class point:
-    def __init__(self, x, y):
+    """Точка на двумерной игровой карте.
+    
+    Attributes:
+        x (int): Горизонтальная координата (0-9)
+        y (int): Вертикальная координата (0-9)
+    """
+    def __init__(self, x: int, y: int) -> None:
         self.x = x
         self.y = y
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        """Сравнение координат двух точек."""
         if isinstance(other, point):
             return self.x == other.x and self.y == other.y
         return False
 
-    def __hash__(self):
+    def __hash__(self) -> int:
+        """Генерация хеша для использования в словарях."""
         return hash((self.x, self.y))
 
 
 class entity:
+    """Сущность монстра на игровом поле.
+    
+    Args:
+        name (str): Уникальное имя монстра
+        hp (int): Текущий уровень здоровья
+        msg (str): Сообщение при встрече с игроком
+    """
     def __init__(self, name: str, hp: int, msg: str) -> None:
         self.name = name
         self.hp = hp
@@ -27,7 +53,12 @@ class entity:
 
 
 class player:
-    def __init__(self, queue: asyncio.Queue):
+    """Представление игрока в системе.
+    
+    Args:
+        queue (asyncio.Queue): Очередь для отправки сообщений игроку
+    """
+    def __init__(self, queue: asyncio.Queue) -> None:
         self.coords = point(0, 0)
         self.queue = queue
 
@@ -60,10 +91,31 @@ EOC
 
 
 def add_mod_10(p1: point, p2: point) -> point:
+    """Вычисляет новые координаты с циклическими границами.
+    
+    Args:
+        p1: Исходная позиция
+        p2: Смещение
+        
+    Returns:
+        Новая позиция (координаты по модулю 10)
+    """
     return point((p1.x + p2.x) % 10, (p1.y + p2.y) % 10)
 
 
-def encounter(name, msg) -> str:
+def encounter(name: str, msg: str) -> str:
+    """Генерирует сообщение при встрече с монстром.
+    
+    Args:
+        name: Имя монстра из cowsay
+        msg: Текст сообщения
+        
+    Returns:
+        Отформатированная строка с ASCII-артом
+        
+    Raises:
+        KeyError: Для неизвестных имен монстров
+    """
     if name in cowsay.list_cows():
         return cowsay.cowsay(msg, cow=name)
     else:
@@ -71,6 +123,19 @@ def encounter(name, msg) -> str:
 
 
 def move_player(player: str, dx: int, dy: int) -> str:
+    """Обрабатывает перемещение игрока.
+    
+    Args:
+        player: Имя игрока
+        dx: Смещение по X
+        dy: Смещение по Y
+        
+    Returns:
+        Статус перемещения и встречи с монстром
+        
+    Raises:
+        KeyError: При несуществующем имени игрока
+    """
     coords = add_mod_10(players[player].coords, point(dx, dy))
     players[player].coords = coords
     response = f'Moved to ({coords.x}, {coords.y})'
@@ -83,7 +148,19 @@ def move_player(player: str, dx: int, dy: int) -> str:
     return response
 
 
-def addmon(player: str, name: str, coords: point, hp: int, msg: str):
+def addmon(player: str, name: str, coords: point, hp: int, msg: str) -> tuple[str, str]:
+    """Добавляет или заменяет монстра на карте.
+    
+    Args:
+        player: Имя инициатора команды
+        name: Тип монстра
+        coords: Позиция размещения
+        hp: Здоровье монстра
+        msg: Сообщение при встрече
+        
+    Returns:
+        tuple: (локальное сообщение, глобальное уведомление)
+    """
     response = f'Added monster {name} to ({coords.x}, {coords.y}) saying {msg}'
     response_all = f'{player}: added monster {name} saying {msg}'
 
@@ -95,7 +172,17 @@ def addmon(player: str, name: str, coords: point, hp: int, msg: str):
     return (response, response_all)
 
 
-def attack(player, name, damage):
+def attack(player: str, name: str, damage: int) -> tuple[str, str | None]:
+    """Обрабатывает атаку монстра.
+    
+    Args:
+        player: Имя атакующего
+        name: Цель атаки
+        damage: Наносимый урон
+        
+    Returns:
+        tuple: (локальный результат, глобальное уведомление)
+    """
     monster = monsters[players[player].coords]
     response_all = None
     if not monster or monster.name != name:
@@ -116,7 +203,8 @@ def attack(player, name, damage):
     return (response, response_all)
 
 
-async def monster_timer():
+async def monster_timer() -> None:
+    """Периодическое перемещение монстров (каждые 30 сек)."""
     while True:
         await asyncio.sleep(30)
         if monsters.values():
@@ -141,7 +229,13 @@ async def monster_timer():
                 break
 
 
-async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+    """Обработчик TCP-подключений клиентов.
+    
+    Args:
+        reader: Входной поток данных
+        writer: Выходной поток данных
+    """
     try:
         me = await reader.readline()
         me = me.decode().strip()
@@ -215,10 +309,12 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
         del players[me]
 
 
-async def main():
+async def main() -> None:
+    """Точка входа для запуска сервера."""
     server = await asyncio.start_server(handle_client, 'localhost', 1337)
     asyncio.create_task(monster_timer())
     async with server:
         await server.serve_forever()
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
