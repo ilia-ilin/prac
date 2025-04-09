@@ -14,11 +14,17 @@ class MUD(cmd.Cmd):
     intro = '<<< Welcome to Python-MUD 0.1 >>>'
     prompt = 'MUD>> '
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, name, stdin=None, delay=None):
+
+        self.use_rawinput = stdin is None
+
+        self.playerName = name
+        self.delay = delay
+
+        super().__init__(stdin=stdin)
+
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
-        self.playerName = sys.argv[1]
         self.local_srv_loop = None
         self.local_srv_queue = None
         self.close_event = None
@@ -34,6 +40,8 @@ class MUD(cmd.Cmd):
                 self.local_srv_queue.put_nowait,
                 msg
             )
+            if self.delay:
+                self.loop.run_until_complete(asyncio.sleep(self.delay))
         else:
             exit(0)
 
@@ -136,6 +144,9 @@ class MUD(cmd.Cmd):
                 self.send(f"sayall {arg}")
         except Exception as e:
             print(e.args)
+    
+    def do_EOF(self, arg):
+        return True
 
 
 async def local_srv(cmdline: MUD):
@@ -212,11 +223,21 @@ def main():
     if len(sys.argv) < 2:
         print("Get name!")
         return
-
-    cmdline = MUD()
-    thread = threading.Thread(target=run_local_srv_in_thread, args=(cmdline,))
-    thread.start()
-    cmdline.cmdloop()
+    
+    if len(sys.argv) >= 4:
+        if sys.argv[2] == '--file':
+            with open(sys.argv[3], 'r') as file:
+                cmdline = MUD(sys.argv[1], file, 1.0)
+                thread = threading.Thread(target=run_local_srv_in_thread, args=(cmdline,))
+                thread.start()
+                cmdline.cmdloop()
+        else:
+            print('Invalid arguments!')
+    else:
+        cmdline = MUD(sys.argv[1])
+        thread = threading.Thread(target=run_local_srv_in_thread, args=(cmdline,))
+        thread.start()
+        cmdline.cmdloop()
 
 
 if __name__ == '__main__':

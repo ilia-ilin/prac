@@ -299,6 +299,8 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                     writer.write(
                         (q.result().replace('\n', '\\n') + '\n').encode())
                     await writer.drain()
+    except Exception as e:
+        print(e.args)
     finally:
         for p in players:
             if p != me:
