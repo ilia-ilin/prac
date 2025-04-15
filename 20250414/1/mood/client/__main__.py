@@ -144,9 +144,18 @@ class MUD(cmd.Cmd):
                 self.send(f"sayall {arg}")
         except Exception as e:
             print(e.args)
-    
+
     def do_EOF(self, arg):
         return True
+
+    def do_movemonsters(self, arg):
+        if arg in ['on', 'off']:
+            self.send(f"movemonsters {arg}")
+        else:
+            print("Invalid arguments")
+
+    def complete_movemonsters(self, text, line, begidx, endidx):
+        return [name for name in ['on', 'off'] if name.startswith(text)]
 
 
 async def local_srv(cmdline: MUD):
@@ -223,7 +232,7 @@ def main():
     if len(sys.argv) < 2:
         print("Get name!")
         return
-    
+
     if len(sys.argv) >= 4:
         if sys.argv[2] == '--file':
             with open(sys.argv[3], 'r') as file:

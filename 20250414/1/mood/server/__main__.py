@@ -18,7 +18,7 @@ from io import StringIO
 
 class point:
     """Точка на двумерной игровой карте.
-    
+
     Attributes:
         x (int): Горизонтальная координата (0-9)
         y (int): Вертикальная координата (0-9)
@@ -40,7 +40,7 @@ class point:
 
 class entity:
     """Сущность монстра на игровом поле.
-    
+
     Args:
         name (str): Уникальное имя монстра
         hp (int): Текущий уровень здоровья
@@ -54,7 +54,7 @@ class entity:
 
 class player:
     """Представление игрока в системе.
-    
+
     Args:
         queue (asyncio.Queue): Очередь для отправки сообщений игроку
     """
@@ -88,15 +88,16 @@ $the_cow = <<EOC;
 EOC
 """))
 }
+movemonsters = True
 
 
 def add_mod_10(p1: point, p2: point) -> point:
     """Вычисляет новые координаты с циклическими границами.
-    
+
     Args:
         p1: Исходная позиция
         p2: Смещение
-        
+
     Returns:
         Новая позиция (координаты по модулю 10)
     """
@@ -105,14 +106,14 @@ def add_mod_10(p1: point, p2: point) -> point:
 
 def encounter(name: str, msg: str) -> str:
     """Генерирует сообщение при встрече с монстром.
-    
+
     Args:
         name: Имя монстра из cowsay
         msg: Текст сообщения
-        
+
     Returns:
         Отформатированная строка с ASCII-артом
-        
+
     Raises:
         KeyError: Для неизвестных имен монстров
     """
@@ -124,15 +125,15 @@ def encounter(name: str, msg: str) -> str:
 
 def move_player(player: str, dx: int, dy: int) -> str:
     """Обрабатывает перемещение игрока.
-    
+
     Args:
         player: Имя игрока
         dx: Смещение по X
         dy: Смещение по Y
-        
+
     Returns:
         Статус перемещения и встречи с монстром
-        
+
     Raises:
         KeyError: При несуществующем имени игрока
     """
@@ -150,14 +151,14 @@ def move_player(player: str, dx: int, dy: int) -> str:
 
 def addmon(player: str, name: str, coords: point, hp: int, msg: str) -> tuple[str, str]:
     """Добавляет или заменяет монстра на карте.
-    
+
     Args:
         player: Имя инициатора команды
         name: Тип монстра
         coords: Позиция размещения
         hp: Здоровье монстра
         msg: Сообщение при встрече
-        
+
     Returns:
         tuple: (локальное сообщение, глобальное уведомление)
     """
@@ -174,12 +175,12 @@ def addmon(player: str, name: str, coords: point, hp: int, msg: str) -> tuple[st
 
 def attack(player: str, name: str, damage: int) -> tuple[str, str | None]:
     """Обрабатывает атаку монстра.
-    
+
     Args:
         player: Имя атакующего
         name: Цель атаки
         damage: Наносимый урон
-        
+
     Returns:
         tuple: (локальный результат, глобальное уведомление)
     """
@@ -205,9 +206,9 @@ def attack(player: str, name: str, damage: int) -> tuple[str, str | None]:
 
 async def monster_timer() -> None:
     """Периодическое перемещение монстров (каждые 30 сек)."""
-    while True:
+    while movemonsters:
         await asyncio.sleep(30)
-        if monsters.values():
+        if movemonsters and monsters.values():
             while True:
                 rnd_monster_coords = random.choice(list(monsters.keys()))
                 d = list(directions.keys())[random.randrange(4)]
@@ -231,7 +232,7 @@ async def monster_timer() -> None:
 
 async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
     """Обработчик TCP-подключений клиентов.
-    
+
     Args:
         reader: Входной поток данных
         writer: Выходной поток данных
@@ -285,6 +286,17 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                         msg = ' '.join(cmd[1:])
                         response = None
                         response_all = f'{me}: {msg}'
+                    elif cmd[0] == "movemonsters":
+                        if cmd[1] == 'on':
+                            global movemonsters
+                            if not movemonsters:
+                                movemonsters = True
+                                asyncio.create_task(monster_timer())
+                        else:
+                            movemonsters = False
+                        response = f'Moving monsters: {cmd[1]}'
+                        response_all = None
+
                     if response:
                         writer.write(
                             (response.replace('\n', '\\n') + '\n').encode())
@@ -305,9 +317,10 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
         for p in players:
             if p != me:
                 await players[p].queue.put(f'{me} disconnected.')
-        writer.write(('closed\n').encode())
-        await writer.drain()
-        writer.close()
+        if writer.is_closing():
+            writer.write(('closed\n').encode())
+            await writer.drain()
+            writer.close()
         del players[me]
 
 
