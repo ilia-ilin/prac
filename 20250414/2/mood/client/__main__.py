@@ -157,6 +157,12 @@ class MUD(cmd.Cmd):
     def complete_movemonsters(self, text, line, begidx, endidx):
         return [name for name in ['on', 'off'] if name.startswith(text)]
 
+    def do_locale(self, arg):
+        if not arg or ' ' in arg:
+            print("Invalid arguments")
+        else:
+            self.send(f"locale {arg}")
+
 
 async def local_srv(cmdline: MUD):
     try:
