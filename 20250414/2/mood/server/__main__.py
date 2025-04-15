@@ -10,10 +10,16 @@ MUD-сервер для текстовой многопользовательс�
 """
 
 # MUD-server
+
+# После копирования на wsl применить:
+# dos2unix locales/ru/LC_MESSAGES/messages.po
+# pybabel compile -d locales -D messages
+
 import asyncio
 import cowsay
 import random
 from io import StringIO
+from gettext import translation
 
 
 class point:
@@ -61,6 +67,7 @@ class player:
     def __init__(self, queue: asyncio.Queue) -> None:
         self.coords = point(0, 0)
         self.queue = queue
+        self.lang = 'en'
 
 
 monsters = {}   # coords: entity
@@ -89,6 +96,46 @@ EOC
 """))
 }
 movemonsters = True
+
+
+def localize(lang: str, msg: str, msg2: str | None = None,
+             num: int | None = None) -> str:
+    """Локализует сообщение с поддержкой множественных форм и параметров.
+
+    Использует систему gettext для перевода сообщений с учетом:
+    - Языковой локализации
+    - Множественного числа (plural forms)
+    - Динамической подстановки параметров
+
+    Args:
+        lang: Код языка (например, 'ru', 'en')
+        msg: Базовое сообщение для перевода
+        msg2: Альтернативная форма для множественного числа (optional)
+        num: Число для выбора формы множественного числа (optional)
+
+    Returns:
+        Локализованная и не отформатированная строка
+
+    Raises:
+        KeyError: Если параметры содержат несуществующие ключи
+        gettext.Error: При проблемах с загрузкой переводов
+    """
+    trans = translation(
+        'messages',
+        localedir='locales',
+        languages=[lang],
+        fallback=True
+    )
+
+    if num:
+        msg = trans.gettext(
+            msg,
+            msg2,
+            num
+        )
+    else:
+        msg = trans.gettext(msg)
+    return msg
 
 
 def add_mod_10(p1: point, p2: point) -> point:
@@ -139,7 +186,7 @@ def move_player(player: str, dx: int, dy: int) -> str:
     """
     coords = add_mod_10(players[player].coords, point(dx, dy))
     players[player].coords = coords
-    response = f'Moved to ({coords.x}, {coords.y})'
+    response = localize(players[player].lang, 'Moved to %(coords)s') % {'coords': f'({coords.x}, {coords.y})'}
 
     if coords in monsters:
         response += '\n' + encounter(
@@ -149,7 +196,7 @@ def move_player(player: str, dx: int, dy: int) -> str:
     return response
 
 
-def addmon(player: str, name: str, coords: point, hp: int, msg: str) -> tuple[str, str]:
+def addmon(player: str, name: str, coords: point, hp: int, msg: str) -> tuple[str, dict]:
     """Добавляет или заменяет монстра на карте.
 
     Args:
@@ -162,18 +209,29 @@ def addmon(player: str, name: str, coords: point, hp: int, msg: str) -> tuple[st
     Returns:
         tuple: (локальное сообщение, глобальное уведомление)
     """
-    response = f'Added monster {name} to ({coords.x}, {coords.y}) saying {msg}'
-    response_all = f'{player}: added monster {name} saying {msg}'
+    response = localize(players[player].lang, 'Added monster %(name)s to %(coords)s saying %(msg)s') % {
+        'name': name,
+        'coords': f'({coords.x}, {coords.y})',
+        'msg': msg}
+    response_all = {}
+    for p in players:
+        if p != player:
+            response_all[p] = localize(players[p].lang, '%(player)s: added monster %(name)s saying %(msg)s') % {
+                'player': player,
+                'name': name,
+                'msg': msg}
 
     if coords in monsters:
-        response += '\nReplaced the old monster'
-        response_all += '\nReplaced the old monster'
+        response += '\n' + localize(players[player].lang, 'Replaced the old monster')
+        for p in players:
+            if p != player:
+                response_all[p] += '\n' + localize(players[p].lang, 'Replaced the old monster')
     monsters[coords] = entity(name, hp, msg)
 
     return (response, response_all)
 
 
-def attack(player: str, name: str, damage: int) -> tuple[str, str | None]:
+def attack(player: str, name: str, damage: int) -> tuple[str, dict | None]:
     """Обрабатывает атаку монстра.
 
     Args:
@@ -187,19 +245,35 @@ def attack(player: str, name: str, damage: int) -> tuple[str, str | None]:
     monster = monsters[players[player].coords]
     response_all = None
     if not monster or monster.name != name:
-        response = f'No {name} here'
+        response = localize(players[player].lang, 'No %(name)s here') % {'name': name}
     else:
         damage = min(damage, monster.hp)
         monster.hp -= damage
-        response = f'Attacked {name},  damage {damage} hp'
-        response_all = f'{player}: attacked {name},  damage {damage} hp'
+        response = localize(players[player].lang, 'Attacked %(name)s,  damage %(damage)d hp',
+                            'Attacked %(name)s,  damage %(damage)d hp', damage) % {'name': name, 'damage': damage}
+        response_all = {}
+        for p in players:
+            if p != players:
+                response_all[p] = localize(players[player].lang, "%(player)s: attacked %(name)s,  damage %(damage)d hp",
+                                           "%(player)s: attacked %(name)s,  damage %(damage)d hp", damage) % {
+                                               'player': player,
+                                               'name': name,
+                                               'damage': damage}
         if monster.hp == 0:
-            response += f'\n{name} died'
-            response_all += f'\n{name} died'
+            response += '\n' + localize(players[player].lang, '%(name)s died') % {'name': name}
+            for p in players:
+                if p != players:
+                    response_all[p] += '\n' + localize(players[p].lang, '%(name)s died') % {'name': name}
             del monsters[players[player].coords]
         else:
-            response += f'\n{name} now has {monster.hp}'
-            response_all += f'\n{name} now has {monster.hp}'
+            response += '\n' + localize(players[player].lang, '%(name)s now has %(hp)s') % {
+                'name': name,
+                'hp': str(monster.hp)}
+            for p in players:
+                if p != players:
+                    response_all[p] += '\n' + localize(players[p].lang, '%(name)s now has %(hp)s') % {
+                        'name': name,
+                        'hp': str(monster.hp)}
 
     return (response, response_all)
 
@@ -218,11 +292,9 @@ async def monster_timer() -> None:
                 monsters[new_coords] = monsters[rnd_monster_coords]
                 del monsters[rnd_monster_coords]
 
-                response_all = monsters[new_coords].name
-                response_all += ' moved one cell '
-                response_all += d
                 for p in players:
-                    await players[p].queue.put(response_all)
+                    await players[p].queue.put(localize(players[p].lang, '%(name)s moved one cell ' + d) % {
+                        'name': monsters[new_coords].name})
                     if players[p].coords == new_coords:
                         await players[p].queue.put(encounter(
                             monsters[new_coords].name,
@@ -251,7 +323,9 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
 
         for p in players:
             if p != me:
-                await players[p].queue.put(f'{me} connected.')
+                await players[p].queue.put(
+                    localize(players[p].lang, '%(name)s connected') % {'name': me}
+                )
 
         send = asyncio.create_task(reader.readline())
         receive = asyncio.create_task(players[me].queue.get())
@@ -284,7 +358,6 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                         response, response_all = attack(me, name, damage)
                     elif cmd[0] == "sayall":
                         msg = ' '.join(cmd[1:])
-                        response = None
                         response_all = f'{me}: {msg}'
                     elif cmd[0] == "movemonsters":
                         if cmd[1] == 'on':
@@ -294,13 +367,14 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                                 asyncio.create_task(monster_timer())
                         else:
                             movemonsters = False
-                        response = f'Moving monsters: {cmd[1]}'
-                        response_all = None
+                        response = localize(players[me].lang, 'Moving monsters: ' + cmd[1])
+                    elif cmd[0] == "locale":
+                        players[me].lang = cmd[1]
+                        response = localize(players[me].lang, 'Set up locale: %(lang)s') % {'lang': cmd[1]}
 
                     if response:
-                        writer.write(
-                            (response.replace('\n', '\\n') + '\n').encode())
-                    await writer.drain()
+                        await players[me].queue.put(response)
+                        response = None
                     if response_all:
                         for p in players:
                             if p != me:
@@ -314,10 +388,13 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
     except Exception as e:
         print(e.args)
     finally:
-        for p in players:
-            if p != me:
-                await players[p].queue.put(f'{me} disconnected.')
         if writer.is_closing():
+            for p in players:
+                if p != me:
+                    await players[p].queue.put(
+                        localize(players[p].lang, '%(name)s disconnected') % {'name': me}
+                    )
+        else:
             writer.write(('closed\n').encode())
             await writer.drain()
             writer.close()

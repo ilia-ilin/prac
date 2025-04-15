@@ -169,7 +169,7 @@ async def local_srv(cmdline: MUD):
         reader, writer = await asyncio.open_connection('localhost', 1337)
     except Exception:
         cmdline.close_event.set()
-        print('server is closed!')
+        print('Server is closed!')
         exit(0)
 
     writer.write((f'{sys.argv[1]}\n').encode())
