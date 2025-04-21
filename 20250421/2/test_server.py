@@ -5,49 +5,37 @@ from mood.server import start_server
 
 
 class TestServerCommands(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(self):
         self.proc = mp.Process(target=start_server, args=('localhost', 1337))
         self.proc.start()
         # Ждем запуска сервера
         self.client = socket.socket()
         self.client.connect(('localhost', 1337))
 
-        self.client.send(b'movemonsters off\n')
-        _ = self.client.recv(1024).decode()
+        self.client.send('test_player\n'.encode())
+        print(self.client.recv(1024).decode())
+        self.client.send('movemonsters off\n'.encode())
+        print(self.client.recv(1024).decode())  
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(self):
+        print('once')
         self.client.close()
         self.proc.terminate()
 
-    def test_add_monster(self):
-        self.client.send(b'addmon eyes coords 1 0 hello 0_0 hp 1000\n')
+    def test_01_add_monster(self):
+        self.client.send('addmon eyes 1 0 1000 0_0\n'.encode())
         response = self.client.recv(1024).decode()
         self.assertIn('Added monster eyes to (1, 0) saying 0_0', response)
 
-    def test_move_to_monster(self):
-        self.client.send(b'right\n')
+    def test_02_move_to_monster(self):
+        self.client.send('move 1 0\n'.encode())
         response = self.client.recv(1024).decode()
-
-        assrt = '''
-Moved to (1, 0)
- _____
-< 0_0 >
- -----
-    \\
-     \\
-                                   .::!!!!!!!:.
-  .!!!!!:.                        .:!!!!!!!!!!!!
-  ~~~~!!!!!!.                 .:!!!!!!!!!UWWW$$$
-      :$$NWX!!:           .:!!!!!!XUWW$$$$$$$$$P
-      $$$$$##WX!:      .<!!!!UW$$$$"  $$$$$$$$#
-      $$$$$  $$$UX   :!!UW$$$$$$$$$   4$$$$$*
-      ^$$$B  $$$$\\     $$$$$$$$$$$$   d$$R"
-        "*$bd$$$$      '*$$$$$$$$$$$o+#"
-             """"          """""""
-'''
+        assrt = 'Moved to (1, 0)\\n _____ \\n< 0_0 >\\n ----- \\n    \\\\n     \\\\n                                   .::!!!!!!!:.\\n  .!!!!!:.                        .:!!!!!!!!!!!!\\n  ~~~~!!!!!!.                 .:!!!!!!!!!UWWW$$$ \\n      :$$NWX!!:           .:!!!!!!XUWW$$$$$$$$$P \\n      $$$$$##WX!:      .<!!!!UW$$$$"  $$$$$$$$# \\n      $$$$$  $$$UX   :!!UW$$$$$$$$$   4$$$$$* \\n      ^$$$B  $$$$\\     $$$$$$$$$$$$   d$$R" \\n        "*$bd$$$$      \'*$$$$$$$$$$$o+#" \\n             """"          """"""" \n'
         self.assertIn(assrt, response)
 
-    def test_attack_monster(self):
-        self.client.send(b'attack sword\n')
+    def test_03_attack_monster(self):
+        self.client.send('attack eyes 15\n'.encode())
         response = self.client.recv(1024).decode()
-        self.assertRegex('Attacked eyes,  damage 15 hp\neyes now has 985', response)
+        self.assertIn('Attacked eyes,  damage 15 hp\\neyes now has 985\n', response)

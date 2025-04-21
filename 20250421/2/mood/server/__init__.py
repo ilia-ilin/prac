@@ -242,7 +242,10 @@ def attack(player: str, name: str, damage: int) -> tuple[str, dict | None]:
     Returns:
         tuple: (локальный результат, глобальное уведомление)
     """
-    monster = monsters[players[player].coords]
+    if players[player].coords in monsters:
+        monster = monsters[players[player].coords]
+    else:
+        monster = None
     response_all = None
     if not monster or monster.name != name:
         response = localize(players[player].lang, 'No %(name)s here') % {'name': name}
@@ -386,7 +389,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                         (q.result().replace('\n', '\\n') + '\n').encode())
                     await writer.drain()
     except Exception as e:
-        print(e.args)
+        print(repr(e))
     finally:
         if writer.is_closing():
             for p in players:
