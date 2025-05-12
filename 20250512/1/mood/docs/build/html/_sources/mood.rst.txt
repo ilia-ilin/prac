@@ -7,8 +7,8 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   mood.client
    mood.server
+   mood.client
 
 Module contents
 ---------------
