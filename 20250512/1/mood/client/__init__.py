@@ -3,6 +3,8 @@ import cmd
 import cowsay
 import readline
 import threading
+import webbrowser
+from pathlib import Path
 
 weaponsDmg = {'sword': 10, 'spear': 15, 'axe': 20}
 customMonsters = ["jgsbat"]
@@ -160,6 +162,10 @@ class MUD(cmd.Cmd):
             print("Invalid arguments")
         else:
             self.send(f"locale {arg}")
+
+    def do_documentation(self, arg):
+        docs_path = Path(__file__).parent.parent / "docs/build/html/index.html"
+        webbrowser.open(f"file://{docs_path.resolve()}")
 
 
 async def local_srv(cmdline: MUD, name: str):

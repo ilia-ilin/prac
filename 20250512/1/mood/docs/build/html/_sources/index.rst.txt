@@ -94,8 +94,10 @@
 .. toctree::
    :maxdepth: 2
    :caption: Полная документация:
-
+   
+   mood
    mood.server
+   mood.client
 
 Индексы и таблицы
 =================

@@ -4,10 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pytest = "*"
-python-cowsay = "*"
 sphinx = "*"
 sphinx-rtd-theme = "*"
+pytest = "*"
+build = "*"
+python-cowsay = "*"
+mood-game = {file = "dist/mood_game-1.0.0-py3-none-any.whl"}
 
 [dev-packages]
 
