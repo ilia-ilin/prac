@@ -168,11 +168,9 @@ class MUD(cmd.Cmd):
         webbrowser.open(f"file://{docs_path.resolve()}")
 
 
-async def local_srv(cmdline: MUD, name: str, ip: str):
+async def local_srv(cmdline: MUD, name: str):
     try:
-        if not ip:
-            ip = 'localhost'
-        reader, writer = await asyncio.open_connection(ip, 1337)
+        reader, writer = await asyncio.open_connection('localhost', 1337)
     except Exception:
         cmdline.close_event.set()
         print('Server is closed!')
@@ -231,10 +229,10 @@ async def local_srv(cmdline: MUD, name: str, ip: str):
         await writer.wait_closed()
 
 
-def run_local_srv_in_thread(cmdline: MUD, name: str, ip: str):
+def run_local_srv_in_thread(cmdline: MUD, name: str):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     cmdline.local_srv_queue = asyncio.Queue()
     cmdline.local_srv_loop = loop
     cmdline.close_event = threading.Event()
-    loop.run_until_complete(local_srv(cmdline, name, ip))
+    loop.run_until_complete(local_srv(cmdline, name))

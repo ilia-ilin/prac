@@ -4,23 +4,32 @@ import threading
 from mood.client import MUD, run_local_srv_in_thread
 
 
+def find(lst: list, sub: str) -> int:
+    try:
+        return lst.index(sub)
+    except ValueError:
+        return -1
+
+
 def main():
     if len(sys.argv) < 2:
         print("Get name!")
         return
 
-    if len(sys.argv) >= 4:
-        if sys.argv[2] == '--file':
-            with open(sys.argv[3], 'r') as file:
-                cmdline = MUD(sys.argv[1], file, 1.0)
-                thread = threading.Thread(target=run_local_srv_in_thread, args=(cmdline, sys.argv[1]))
-                thread.start()
-                cmdline.cmdloop()
-        else:
-            print('Invalid arguments!')
+    fileIdx, ipIdx = find(sys.argv, '--file'), find(sys.argv, '--ip')
+    if ipIdx >= 0:
+        ip = sys.argv[ipIdx + 1]
+    else:
+        ip = None
+    if fileIdx >= 0:
+        with open(sys.argv[fileIdx + 1], 'r') as file:
+            cmdline = MUD(sys.argv[1], file, 1.0)
+            thread = threading.Thread(target=run_local_srv_in_thread, args=(cmdline, sys.argv[1], ip))
+            thread.start()
+            cmdline.cmdloop()
     else:
         cmdline = MUD(sys.argv[1])
-        thread = threading.Thread(target=run_local_srv_in_thread, args=(cmdline, sys.argv[1]))
+        thread = threading.Thread(target=run_local_srv_in_thread, args=(cmdline, sys.argv[1], ip))
         thread.start()
         cmdline.cmdloop()
 

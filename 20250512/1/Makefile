@@ -6,7 +6,7 @@ SOURCES = mood/server/*.py
 BABEL_CFG = mood/server/babel.cfg
 TEST_DIR = .
 
-.PHONY: all i18n html test clean clean_i18n clean_docs clean_pyc
+.PHONY: all i18n html test build_package clean clean_i18n clean_docs clean_pyc
 
 all: html
 
@@ -37,6 +37,11 @@ clean_pyc:
 	find . -name '*.pyc' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -rf {} +
 	find . -name '.pytest_cache' -exec rm -rf {} +
+	
+build_package: clean i18n html build_package_b
+
+build_package_b:
+	python3 -m build
 
 # Справка
 help:

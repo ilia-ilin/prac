@@ -19,7 +19,6 @@ import asyncio
 import cowsay
 import random
 from io import StringIO
-from pathlib import Path
 from gettext import translation
 
 
@@ -121,10 +120,9 @@ def localize(lang: str, msg: str, msg2: str | None = None,
         KeyError: Если параметры содержат несуществующие ключи
         gettext.Error: При проблемах с загрузкой переводов
     """
-    package_dir = Path(__file__).parent
     trans = translation(
         'messages',
-        localedir=package_dir / 'locales',
+        localedir='locales',
         languages=[lang],
         fallback=True
     )
@@ -345,7 +343,6 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                     send = asyncio.create_task(reader.readline())
                     data = q.result()
                     cmd = data.decode().strip().split(' ')
-                    response = None
                     response_all = None
                     if not cmd:
                         continue
@@ -364,10 +361,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                         response, response_all = attack(me, name, damage)
                     elif cmd[0] == "sayall":
                         msg = ' '.join(cmd[1:])
-                        response_all = {}
-                        for p in players:
-                            if p != me:
-                                response_all[p] = f'{me}: {msg}'
+                        response_all = f'{me}: {msg}'
                     elif cmd[0] == "movemonsters":
                         if cmd[1] == 'on':
                             global movemonsters
@@ -387,7 +381,7 @@ async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWrit
                     if response_all:
                         for p in players:
                             if p != me:
-                                await players[p].queue.put(response_all[p])
+                                await players[p].queue.put(response_all)
                         response_all = None
                 elif q is receive:
                     receive = asyncio.create_task(players[me].queue.get())
